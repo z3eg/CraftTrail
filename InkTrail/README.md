@@ -1,5 +1,19 @@
 # InkTrail
 
+## Version 1.3.2: filtered ink recipes and visible blockers
+
+Profession filters can hide an ink recipe while the spellbook API reports zero
+for that same recipe. That combination no longer disables Craft. With enough
+bag pigments, a filtered recipe can attempt its normal secure cast; the game
+still validates learned recipe, tools and other requirements. This is not an
+automatic craft or a bypass of game requirements.
+
+Disabled ink actions now show the actual blocker beneath their row. Use
+`/inktrail why` to print the selected recipe's ink checks and pigment counts,
+or `/inktrail version` to print the installed version. Offline tests reproduce
+the hidden-Midnight-Ink case with five Dusky Pigment and zero spell knowledge.
+The real-client click still needs verification.
+
 ## Version 1.3.1: ink Craft availability
 
 Craft checks the learned Inscription recipe list as well as spell knowledge.
@@ -7,7 +21,8 @@ It no longer treats the generic spell usability or disabled cooldown flag as
 proof that an ink cannot be crafted. Bag updates refresh the button after milling.
 Visible ink recipes use their live reagent quantities and tool requirements;
 filtered recipes use spell knowledge and the bundled pigment requirement. An
-unlearned or hidden recipe without spell knowledge remains disabled. The normal
+unlearned or hidden recipe without spell knowledge remained disabled in 1.3.1;
+1.3.2 removes that false-negative check for filtered recipes. The normal
 cast still enforces the game's requirements and keeps the glyph selected.
 
 Lua 5.1 regression tests reproduce Midnight Ink with two and five Dusky Pigment,
@@ -114,7 +129,7 @@ cache, with English names and a question-mark icon as a temporary fallback.
 ## Crafting, milling and the recipe list
 
 - **Craft**, beside an ink, performs one ink cast per click while keeping the glyph
-  selected. It is disabled when the recipe is unlearned, bag pigments are
+  selected. It is disabled when bag pigments are
   insufficient for one cast, the character is busy/dead, the spell is on cooldown,
   or a visible recipe is missing a reagent/tool. Pigments in a bank do not enable it.
 - **Mill**, beside each herb, mills one batch of five per click. It requires learned

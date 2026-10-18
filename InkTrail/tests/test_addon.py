@@ -80,6 +80,7 @@ function Frame:SetAttribute(key, value)
 end
 function Frame:Enable() assert(not combat); self.enabled = true end
 function Frame:Disable() assert(not combat); self.enabled = false end
+function Frame:IsEnabled() return self.enabled end
 function Frame:SetWidth(v) self.width = v end
 function Frame:SetHeight(v) self.height = v end
 function Frame:GetHeight() return self.height or 20 end
@@ -315,7 +316,7 @@ Check(not craft.enabled and craft.attributes.macrotext == nil, 'craft disabled w
 bags[0][1].count = 4; unknown[57704] = true
 local learnedOutput = recipes[2].output; recipes[2].output = 999
 addon.ConfigureAction(craft, addon.BagStacks())
-Check(not craft.enabled, 'unlearned and absent ink disabled')
+Check(craft.enabled, 'hidden ink can attempt a normal cast; spellbook absence is not proof of unlearned recipe')
 recipes[2].output = learnedOutput
 addon.ConfigureAction(craft, addon.BagStacks())
 Check(craft.enabled, 'learned profession recipe accepted even when absent from spellbook'); unknown[57704] = nil
@@ -627,3 +628,44 @@ recipes, bags = savedRecipes, savedBags
 IsSpellKnown, IsUsableSpell, GetSpellCooldown = savedKnown, savedUsable, savedCooldown
 ''')
 print("Midnight Ink regression passed: learned recipe, legacy zero flags, two/five pigments, bag events, live reagents/tools and preserved glyph selection.")
+
+lua.execute(r'''
+local savedRecipes, savedBags = recipes, bags
+local savedKnown, savedCooldown = IsSpellKnown, GetSpellCooldown
+line = 'Inscription'; skill = 375; selection = 1
+combat, linked, dead, casting = false, false, false, false
+recipes = {{output = 40897, reagents = {{39774, 1}, {39354, 1}}}}
+IsSpellKnown = function() return 0 end
+GetSpellCooldown = function() return 0, 0, 0 end
+bags = {[0] = {{id = 39334, count = 5}}}
+addon.Refresh()
+local craft
+for _, row in ipairs(VisibleItems()) do if row.itemID == 39774 then craft = row.action end end
+Check(craft and craft.enabled, 'hidden Midnight Ink stays enabled even when generic knowledge API returns zero')
+Check(craft.attributes.macrotext == '/cast [nocombat] InkSpell53462', 'hidden recipe retains normal secure cast')
+bags[0][1].count = 1
+addon.Refresh()
+Check(not craft.enabled, 'insufficient bags still disable a hidden recipe')
+local reasonFound = false
+for _, frame in ipairs(frames) do
+    if frame.text and frame:IsShown() and not frame.itemID then
+        local text = frame.text:GetText() or ''
+        if string.find(text, 'Craft unavailable: Not enough pigment', 1, true) then
+            reasonFound = true
+            Check(frame:GetHeight() >= frame.text:GetStringHeight(), 'disabled reason reserves its wrapped height')
+        end
+    end
+end
+Check(reasonFound, 'disabled craft reason is visible without hovering')
+local savedPrint, messages = print, {}
+print = function(text) messages[#messages + 1] = text end
+GetAddOnMetadata = function() return '1.3.2' end
+SlashCmdList.INKTRAIL('why')
+Check(#messages == 2 and string.find(messages[2], 'DISABLED', 1, true), 'why command reports exact blocker')
+SlashCmdList.INKTRAIL('version')
+Check(messages[3] == 'InkTrail version: 1.3.2', 'version command reports installed metadata')
+print = savedPrint
+recipes, bags = savedRecipes, savedBags
+IsSpellKnown, GetSpellCooldown = savedKnown, savedCooldown
+''')
+print("Hidden-recipe regression passed with zero spell knowledge, visible wrapped blockers, and why/version diagnostics.")

@@ -64,9 +64,9 @@ function addon.ActionState(kind, id, stacks, pigmentCount)
     if kind == "craft" then
         local recipe = addon.inks[id]
         local index = InkRecipeIndex(id)
-        if not index and not KnowsSpell(recipe.spell) then
-            return false, "This character has not learned this ink recipe, or it is hidden by profession filters."
-        end
+        -- A filtered-out profession recipe is not proof it is unlearned.
+        -- Let the normal hardware-click cast validate knowledge instead of
+        -- permanently disabling the button on unreliable spellbook APIs.
         -- Generic IsUsableSpell/its enabled cooldown flag can reject profession
         -- recipes even with reagents available. Validate bag reagents directly;
         -- the normal cast still enforces learned recipe, tools and requirements.
@@ -93,7 +93,9 @@ function addon.ActionState(kind, id, stacks, pigmentCount)
         end
         local spell = GetSpellInfo(recipe.spell)
         if not spell then return false, "Recipe is not loaded yet." end
-        return true, "Craft one ink.", "/cast [nocombat] " .. spell
+        local hint = index and "Craft one ink." or
+            "Craft one ink. Recipe hidden by filters; the game will validate learned recipe and tools."
+        return true, hint, "/cast [nocombat] " .. spell
     end
     local ready, why = SpellReady(51005)
     if not ready then return false, why end

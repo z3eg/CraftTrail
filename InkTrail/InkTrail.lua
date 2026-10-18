@@ -44,6 +44,19 @@ function addon.BuildGroups(index)
     return groups
 end
 
+function addon.ExplainCraftAvailability()
+    local groups = addon.BuildGroups(GetTradeSkillSelectionIndex())
+    local version = GetAddOnMetadata and GetAddOnMetadata(addonName, "Version") or "unknown"
+    print("InkTrail " .. version .. " Craft checks:")
+    if #groups == 0 then print("Select an Inscription glyph or ink recipe first.") end
+    for _, group in ipairs(groups) do
+        local enabled, reason = addon.ActionState("craft", group.ink, {}, group.pigmentCount)
+        print((addon.names[group.ink] or tostring(group.ink)) .. ": " ..
+            (enabled and "ENABLED - " or "DISABLED - ") .. reason .. " Pigment in bags: " ..
+            GetItemCount(group.pigment, false) .. "; required: " .. group.pigmentCount .. ".")
+    end
+end
+
 local function ItemDetails(id)
     local name, link, _, _, _, _, _, _, _, texture = GetItemInfo(id)
     if not name and not requested[id] then
@@ -194,9 +207,17 @@ function addon.Refresh()
             end
         else
             row.text:SetText(text)
+            row:SetHeight(math.max(20, row.text:GetStringHeight() + 4))
         end
+        if item then row:SetHeight(26) end
         row:Show()
         position = position + row:GetHeight()
+        if item and action == "craft" then
+            local enabled = row.action:IsEnabled()
+            if not enabled or enabled == 0 then
+                Row("Craft unavailable: " .. (row.action.reason or "Unknown reason."))
+            end
+        end
     end
     Row("InkTrail - ink > pigment > herbs")
     for _, group in ipairs(groups) do
