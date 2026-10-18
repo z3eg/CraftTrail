@@ -1,0 +1,12 @@
+{
+  "coreCommit": "39edc402ba858302f32eb03e8eec7eb3a7fedc7d",
+  "engineeringOutputs": 295,
+  "referencedItems": 506,
+  "craftableItems": 372,
+  "inputs": {
+    "Spell.dbc": "d5cce1a83550dcfa9eb2f0251dbb11fd24c272534b2b1a9b230924a44d817ab3",
+    "SkillLineAbility.dbc": "4154b833d6a26b9b9ce53851d56cb594f0813c0936a72ec89f933cc69abe42c3",
+    "item_template.sql": "bd4859be01946ca1521f7896f558f665e1e1d98890757a3df30e717b62768cc6"
+  },
+  "note": "Base SQL/DBC snapshot. All alternate recipes retained; no live database queried."
+}

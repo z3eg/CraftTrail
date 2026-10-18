@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CraftTrail — Engineering preview</title>
+<style>
+body{margin:0;padding:24px;background:#17191d;color:#e9e4d4;font:16px system-ui,sans-serif}
+main{max-width:580px;margin:auto;background:#25221d;border:2px solid #786647;border-radius:8px;padding:20px}
+h1{margin:0 0 8px;font-size:22px;color:#f3d579}p{color:#d2c9b7;line-height:1.5}
+.tree,.tree ul{list-style:none;margin:0;padding:0}.tree ul{margin:12px 0 0 12px;padding-left:14px;border-left:1px solid #82755e}
+li{position:relative;margin:12px 0}.tree ul>li:before{content:"";position:absolute;left:-14px;top:20px;width:12px;border-top:1px solid #82755e}
+.node{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:10px;background:#302d27;border:1px solid #6a604e;border-radius:4px}
+.name{color:#f5d37b;flex:1;min-width:140px;text-decoration:underline;text-underline-offset:3px}
+.count{font-variant-numeric:tabular-nums;color:#ebe3d0;font-size:14px}
+button{font:inherit;padding:6px 12px;background:#713826;color:#fff0d0;border:1px solid #b19058;border-radius:4px;cursor:pointer}
+button:disabled{background:#393a38;color:#aaa;border-color:#67675f;cursor:not-allowed}
+.reason{width:100%;font-size:13px;color:#e3ba9c}.raw{font-size:14px;line-height:1.6;color:#d5cec0}
+#status{min-height:24px;color:#e8d789}footer{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:18px}
+@media(max-width:420px){body{padding:10px}main{padding:12px}.tree ul{margin-left:4px;padding-left:10px}.name{min-width:120px}}
+</style>
+<main id="crafttrail-preview">
+<h1>Engineering · Material trail</h1>
+<p>Design preview · Simulated bags · One cast per click</p>
+<ul class="tree" id="tree"></ul>
+<p id="status" role="status" aria-live="polite">Start with Flying Tiger Goggles, then work upward.</p>
+<footer><span>Carried / required · bag materials only</span><button type="button" id="reset">Reset demo</button></footer>
+<p>This preview does not craft in WoW. Item links open references in your browser;
+the in-game version will use native item links and bank-addon tooltips.</p>
+</main>
+<script>
+(() => {
+  const root = document.getElementById('crafttrail-preview');
+  const recipes = {
+    10500:{name:'Fire Goggles',needs:[[4385,1],[3864,2],[7068,2],[4234,4]]},
+    4385:{name:'Green Tinted Goggles',needs:[[4368,1],[2319,4],[1206,2]]},
+    4368:{name:'Flying Tiger Goggles',needs:[[2318,6],[818,2]]}
+  };
+  const names={3864:'Citrine',7068:'Elemental Fire',4234:'Heavy Leather',2319:'Medium Leather',1206:'Moss Agate',2318:'Light Leather',818:'Tigerseye'};
+  let bags;
+  const status = root.querySelector('#status');
+  function link(id,name){const a=document.createElement('a');a.className='name';a.textContent=name;a.href='https://www.wowhead.com/wotlk/item='+id;a.target='_blank';a.rel='noopener noreferrer';return a;}
+  function draw(id,need){
+    const r=recipes[id],li=document.createElement('li'),box=document.createElement('div');box.className='node';
+    box.appendChild(link(id,r.name));
+    const count=document.createElement('span');count.className='count';count.textContent=(bags[id]||0)+' / '+need;box.appendChild(count);
+    const missing=r.needs.filter(([item,n])=>(bags[item]||0)<n);
+    const button=document.createElement('button');button.type='button';button.textContent='Craft';button.disabled=missing.length>0;
+    button.setAttribute('aria-label','Craft one '+r.name);
+    button.onclick=()=>{for(const[item,n]of r.needs)bags[item]-=n;bags[id]=(bags[id]||0)+1;render();status.textContent='Demo crafted '+r.name+'. Parent requirements refreshed.';};
+    box.appendChild(button);
+    if(missing.length){const why=document.createElement('span');why.className='reason';why.textContent='Missing: '+missing.map(([item,n])=>(n-(bags[item]||0))+' '+(recipes[item]?.name||names[item])).join(', ');box.appendChild(why);}
+    li.appendChild(box);const children=document.createElement('ul');
+    for(const[item,n]of r.needs){
+      if(recipes[item])children.appendChild(draw(item,n));
+      else{const raw=document.createElement('li');raw.className='raw';raw.appendChild(link(item,names[item]));const qty=document.createElement('span');qty.textContent=' · '+(bags[item]||0)+' / '+n;raw.appendChild(qty);children.appendChild(raw);}
+    }
+    li.appendChild(children);return li;
+  }
+  function render(){const tree=root.querySelector('#tree');tree.replaceChildren(draw(10500,1));}
+  function reset(){bags={3864:2,7068:2,4234:4,2319:4,1206:2,2318:6,818:2};render();status.textContent='Start with Flying Tiger Goggles, then work upward.';}
+  root.querySelector('#reset').onclick=reset;
+  reset();
+})();
+</script>
+</html>
