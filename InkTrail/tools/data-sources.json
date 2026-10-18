@@ -1,0 +1,19 @@
+{
+  "coreCommit": "39edc402ba858302f32eb03e8eec7eb3a7fedc7d",
+  "inputs": {
+    "Spell.dbc": "d5cce1a83550dcfa9eb2f0251dbb11fd24c272534b2b1a9b230924a44d817ab3",
+    "GlyphProperties.dbc": "11237852179c218efdba4ddbb899c835a63770505c5dd383b710a3d8c01c1d50",
+    "SkillLineAbility.dbc": "4154b833d6a26b9b9ce53851d56cb594f0813c0936a72ec89f933cc69abe42c3",
+    "Talent.dbc": "23aefff3add151bf504c4d0bab247e2e622f9cf29a473d091cb9f11127d99d68",
+    "TalentTab.dbc": "b9249642e06b2baa17793e50e6719f33b1f89729f6c31ea623d4a39e84660e31",
+    "milling_loot_template.sql": "ed0e5792cbc3e28c2e5a17479b844c4e82c2737557e9cc89051266037217d03a",
+    "reference_loot_template.sql": "0018f3dc7fa45479e05fcc4e0f28d10e49d7d016121e709b66e8d31315c65b25",
+    "item_template.sql": "bd4859be01946ca1521f7896f558f665e1e1d98890757a3df30e717b62768cc6"
+  },
+  "inkCount": 15,
+  "pigmentCount": 15,
+  "itemCount": 75,
+  "glyphLevelCount": 364,
+  "classifiedGlyphCount": 350,
+  "note": "Local base SQL and client DBC snapshot; live database overrides were not queried."
+}

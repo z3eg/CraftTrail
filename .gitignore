@@ -1,0 +1,19 @@
+# Local Python environments and generated test files
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Packages and client-specific state do not belong in source control
+dist/
+*.zip
+WTF/
+*.db
+*.sqlite*
+*.dbc
+*.exe
+*.dll
+*.log
+.env
+.env.*
