@@ -47,7 +47,9 @@ function Frame:SetHyperlinksEnabled(value) self.hyperlinksEnabled = value end
 function Frame:GetText() return self.textValue end
 function Frame:GetStringHeight()
     local lines = 0
-    for line in string.gmatch((self.textValue or '') .. '\n', '(.-)\n') do
+    local visible = string.gsub(self.textValue or '', '|H.-|h(.-)|h', '%1')
+    visible = string.gsub(string.gsub(visible, '|c%x%x%x%x%x%x%x%x', ''), '|r', '')
+    for line in string.gmatch(visible .. '\n', '(.-)\n') do
         lines = lines + math.max(1, math.ceil(#line / 45))
     end
     return lines * 14

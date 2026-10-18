@@ -19,7 +19,7 @@ end
 
 local function Blocked()
     if InCombatLockdown() then return "Unavailable in combat." end
-    if True(IsTradeSkillLinked()) then return "Open your own Inscription profession." end
+    if True(IsTradeSkillLinked()) then return "Open your own profession." end
     if True(UnitIsDeadOrGhost("player")) then return "Unavailable while dead." end
     if UnitCastingInfo("player") or UnitChannelInfo("player") then return "Finish the current cast first." end
 end
@@ -58,9 +58,14 @@ function addon.BagStacks()
     return stacks
 end
 
-function addon.ActionState(kind, id, stacks, pigmentCount)
+function addon.ActionState(kind, id, stacks, pigmentCount, recipeSpell)
     local reason = Blocked()
     if reason then return false, reason end
+    if addon.NativeCraftState and (kind == "craft" or kind == "recipe") then
+        local spell = recipeSpell or (addon.inks[id] and addon.inks[id].spell)
+        local ready, why = addon.NativeCraftState(spell, id)
+        return ready, why, ready and ("/run CraftTrail_Craft(" .. (spell or 0) .. "," .. (id or 0) .. ")") or nil
+    end
     if kind == "craft" then
         local recipe = addon.inks[id]
         local index = InkRecipeIndex(id)
@@ -113,7 +118,7 @@ end
 
 function addon.ConfigureAction(button, stacks)
     if InCombatLockdown() then return end
-    local enabled, reason, macro = addon.ActionState(button.kind, button.itemID, stacks, button.pigmentCount)
+    local enabled, reason, macro = addon.ActionState(button.kind, button.itemID, stacks, button.pigmentCount, button.recipeSpell)
     button.reason = reason
     button:SetAttribute("type", enabled and "macro" or nil)
     button:SetAttribute("macrotext", macro)

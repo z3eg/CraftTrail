@@ -1,5 +1,39 @@
 # InkTrail
 
+## Version 2.0.0: native Craft and all-profession dependency trees
+
+The in-game title is now **CraftTrail (InkTrail)**; the folder, saved variables
+and old slash commands remain compatible. Replace the existing InkTrail folder
+and restart. The same tree style now applies to all eleven recipe professions.
+See the repository README for the list and install/test instructions.
+
+Craft now resolves the learned recipe and calls `DoTradeSkill(index, 1)` through
+the secure button's hardware-click macro, matching the stock 3.3.5 profession
+Create action. It does not rely on `/cast Ink Name`, generic spell knowledge or
+generic spell cooldown flags. Lookup temporarily clears recipe filters and
+expands categories, then restores filters, collapsed headers and the selected
+top-level recipe. A stale index is never saved for later clicks. The native
+recipe's bag reagent quantities, tools and cooldown are checked again on click.
+
+Each node shows an icon/item link (spell link for an enchant), required and
+allocated bag quantities, conservative batch counts/yield ranges, and a Craft
+button when a recipe exists. Arrows cycle alternate methods. Shared bag stock
+and planned surplus are counted once. Existing supplies stop expansion; cycles,
+eight-level depth and a 160-node cap prevent runaway trees. Materials from other
+professions remain references with an explicit disabled reason. Gathering-only
+professions produce raw material leaves, not fictional craft buttons.
+
+`/crafttrail why` includes the last native request and a subsequent client error.
+Requests, started casts and successful casts are different states; a submitted
+request alone is not reported as a completed craft. `/crafttrail version` prints
+the version. The original `/inktrail` commands remain available.
+
+Full-TOC Lua tests cover button clicks through the actual macro callback to a
+mocked DoTradeSkill, including hidden Midnight Ink, restored UI state, stale bags,
+tools, recipe cooldowns, native errors, batch/shared-material accounting and all
+eleven recipe windows. These tests do not replace a real-client protected-action,
+layout and third-party-tooltip check.
+
 ## Version 1.3.2: filtered ink recipes and visible blockers
 
 Profession filters can hide an ink recipe while the spellbook API reports zero
@@ -210,7 +244,8 @@ and attaches to the detail scroll child defined in its
 It uses secure post-hooks rather than replacing Blizzard functions. Crafting and
 milling occur only through user clicks on secure action buttons based on the legacy
 [secure templates](https://github.com/wowgaming/3.3.5-interface-files/blob/main/SecureTemplates.lua).
-The addon does not expand recipe categories or remove the user's filters.
+Version 2.0.0 temporarily expands categories/clears filters for native lookup,
+then restores them. Earlier versions did not perform this lookup.
 
 `Data.lua` contains factual IDs, names and ink/milling relationships generated
 from the local WotLK `Spell.dbc`, `GlyphProperties.dbc` and AzerothCore's `item_template`,

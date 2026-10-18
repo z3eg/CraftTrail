@@ -1,11 +1,14 @@
 ## Interface: 30300
-## Title: InkTrail
-## Notes: Ink, pigment and milling herb links inside the Inscription recipe window.
+## Title: CraftTrail (InkTrail)
+## Notes: Crafting dependency trees, native item links and per-component crafting for all crafting professions.
 ## Author: Guided Work
-## Version: 1.3.2
+## Version: 2.0.0
 ## SavedVariables: InkTrailDB
 
 Data.lua
+ProfessionData.lua
+Recipes.lua
+Tree.lua
 Actions.lua
 Progress.lua
 Description.lua

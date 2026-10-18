@@ -45,6 +45,22 @@ function addon.BuildGroups(index)
 end
 
 function addon.ExplainCraftAvailability()
+    if addon.BuildDependencyTree then
+        print("CraftTrail " .. (GetAddOnMetadata and GetAddOnMetadata(addonName, "Version") or "unknown") ..
+            " - " .. (GetTradeSkillLine() or "no profession"))
+        if addon.lastCraft then
+            print("Last native craft: " .. addon.lastCraft.name .. " - " .. addon.lastCraft.state ..
+                (addon.lastCraft.error and (": " .. addon.lastCraft.error) or ""))
+        end
+        for _, node in ipairs(addon.BuildDependencyTree(GetTradeSkillSelectionIndex())) do
+            if node.recipe then
+                local ready, reason = addon.NativeCraftState(node.recipe.spell, node.item)
+                print((node.item and ((addon.componentNames or {})[node.item] or tostring(node.item)) or
+                    node.recipe.name or "Recipe") .. ": " .. (ready and "ENABLED - " or "DISABLED - ") .. reason)
+            end
+        end
+        return
+    end
     local groups = addon.BuildGroups(GetTradeSkillSelectionIndex())
     local version = GetAddOnMetadata and GetAddOnMetadata(addonName, "Version") or "unknown"
     print("InkTrail " .. version .. " Craft checks:")
@@ -65,14 +81,14 @@ local function ItemDetails(id)
         cacheTooltip:SetHyperlink("item:" .. id .. ":0:0:0:0:0:0:0")
         cacheTooltip:Hide()
     end
-    local fallback = addon.names[id] or ("Item " .. id)
+    local fallback = addon.names[id] or (addon.componentNames or {})[id] or ("Item " .. id)
     return link or ("|cffffffff|Hitem:" .. id .. ":0:0:0:0:0:0:0|h[" .. fallback .. "]|h|r"),
         texture or "Interface\\Icons\\INV_Misc_QuestionMark", name ~= nil
 end
 
 local function Tooltip(self)
-    if not self.itemID then return end
-    local link = ItemDetails(self.itemID)
+    if not self.itemID and not self.spellID then return end
+    local link = self.itemID and ItemDetails(self.itemID) or ("spell:" .. self.spellID)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     GameTooltip:SetHyperlink(link)
     GameTooltip:Show()
@@ -101,7 +117,8 @@ local function GetWidget(index, item)
             if GameTooltip:IsOwned(self) then GameTooltip:Hide() end
         end)
         row:SetScript("OnClick", function(self)
-            local link = ItemDetails(self.itemID)
+            local link = self.itemID and ItemDetails(self.itemID) or (self.spellID and GetSpellLink and GetSpellLink(self.spellID))
+            if not link then return end
             if not HandleModifiedItemClick(link) then
                 SetItemRef(string.match(link, "|H(.-)|h"), link, "LeftButton")
             end
@@ -157,14 +174,17 @@ function addon.Refresh()
     addon.UpdateWindow()
     addon.UpdateRecipeList()
     local inscription = GetSpellInfo(45357)
-    if not inscription or GetTradeSkillLine() ~= inscription then
+    local isInscription = inscription and GetTradeSkillLine() == inscription
+    if not isInscription and not (addon.IsSupportedProfession and addon.IsSupportedProfession()) then
         addon.RestoreDescription(GetTradeSkillSelectionIndex())
         return false
     end
     local index = GetTradeSkillSelectionIndex()
-    local descriptionMissing = addon.UpdateDescription(index)
-    local groups = addon.BuildGroups(index)
-    if #groups == 0 then return descriptionMissing end
+    local descriptionMissing = isInscription and addon.UpdateDescription(index) or false
+    if not isInscription then addon.RestoreDescription(index) end
+    local tree = addon.BuildDependencyTree and addon.BuildDependencyTree(index)
+    local groups = not tree and addon.BuildGroups(index) or {}
+    if (tree and #tree == 0) or (not tree and #groups == 0) then return descriptionMissing end
 
     local lowest = TradeSkillReagentLabel:GetBottom()
     for reagent = 1, GetTradeSkillNumReagents(index) do
@@ -179,59 +199,155 @@ function addon.Refresh()
     panel:Show()
     local position, rowIndex, missing = 0, 0, descriptionMissing
     local stacks = addon.BagStacks()
-    local function Row(text, item, action, pigmentCount)
+    local function Row(text, item, action, pigmentCount, node)
         rowIndex = rowIndex + 1
-        local row = GetWidget(rowIndex, item)
+        local hasLink = item or (node and node.recipe)
+        local row = GetWidget(rowIndex, hasLink)
+        local indent = node and math.min(node.depth, 8) * 11 or 0
         row:ClearAllPoints()
-        row:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, -position)
+        row:SetPoint("TOPLEFT", panel, "TOPLEFT", indent, -position)
+        row:SetWidth(285 - indent)
         row.used = true
         row.hasAction = action ~= nil
         row.itemID = item
-        if item then
-            local link, texture, cached = ItemDetails(item)
+        row.spellID = node and node.recipe and node.recipe.spell
+        if hasLink then
+            local link, texture, cached
+            if item then link, texture, cached = ItemDetails(item)
+            else
+                local name, icon = node.recipe.name
+                if row.spellID then
+                    local spellName, rank, spellIcon = GetSpellInfo(row.spellID)
+                    name, icon = spellName, spellIcon
+                end
+                link = (row.spellID and GetSpellLink and GetSpellLink(row.spellID)) or (name or "Recipe")
+                texture, cached = icon or "Interface\\Icons\\INV_Misc_QuestionMark", name ~= nil
+            end
             row.text:SetText((text or "") .. link)
             row.icon:SetTexture(texture)
             missing = missing or not cached
-            row.text:SetWidth(action and 199 or 254)
+            local textWidth = node and (action and 194 or 245) or (action and 199 or 254)
+            row.text:SetWidth(textWidth - indent - (node and node.alternatives > 1 and 22 or 0))
             if action then
                 if not row.action then row.action = addon.CreateAction(row) end
                 row.action:ClearAllPoints()
                 row.action:SetPoint("RIGHT", row, "RIGHT", 0, 0)
                 row.action.kind, row.action.itemID = action, item
                 row.action.pigmentCount = pigmentCount
-                row.action:SetText(action == "craft" and "Craft" or "Mill")
+                row.action.recipeSpell = node and node.recipe and node.recipe.spell
+                row.action:SetText(action == "mill" and "Mill" or "Craft")
                 addon.ConfigureAction(row.action, stacks)
                 row.action:Show()
             elseif row.action then
                 row.action:Hide()
             end
+            if node and node.alternatives > 1 and action then
+                if not row.choice then
+                    row.choice = CreateFrame("Button", row:GetName() .. "Choice", row, "UIPanelButtonTemplate")
+                    row.choice:SetWidth(20); row.choice:SetHeight(22); row.choice:SetText(">")
+                    row.choice:SetScript("OnClick", function()
+                        if not InCombatLockdown() then addon.CycleRecipe(row.itemID); addon.Refresh() end
+                    end)
+                end
+                row.choice:SetPoint("RIGHT", row.action, "LEFT", -2, 0)
+                row.choice:Show()
+            elseif row.choice then row.choice:Hide() end
+            if node and node.depth > 0 then
+                if not row.branch then
+                    row.branch = row:CreateTexture(nil, "ARTWORK")
+                    row.branch:SetTexture(0.65, 0.55, 0.35, 0.8)
+                    row.branch:SetWidth(8); row.branch:SetHeight(1)
+                    row.trunk = row:CreateTexture(nil, "ARTWORK")
+                    row.trunk:SetTexture(0.65, 0.55, 0.35, 0.8); row.trunk:SetWidth(1)
+                end
+                row.branch:SetPoint("RIGHT", row, "LEFT", -1, 0); row.branch:Show()
+            elseif row.branch then row.branch:Hide(); row.trunk:Hide() end
         else
             row.text:SetText(text)
             row:SetHeight(math.max(20, row.text:GetStringHeight() + 4))
         end
-        if item then row:SetHeight(26) end
+        if hasLink then row:SetHeight(math.max(26, row.text:GetStringHeight() + 8)) end
+        if node then
+            row:SetBackdrop({bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+                edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 8,
+                insets = {left = 2, right = 2, top = 2, bottom = 2}})
+            row:SetBackdropColor(0.1, 0.09, 0.07, 0.95)
+            row.text:ClearAllPoints(); row.text:SetPoint("TOPLEFT", row, "TOPLEFT", 30, -6)
+            row.icon:ClearAllPoints(); row.icon:SetPoint("TOPLEFT", row, "TOPLEFT", 4, -5)
+            if action then row.action:ClearAllPoints(); row.action:SetPoint("TOPRIGHT", row, "TOPRIGHT", -4, -4) end
+            if not row.meta then
+                row.meta = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                row.meta:SetJustifyH("LEFT")
+                row.blocker = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+                row.blocker:SetJustifyH("LEFT")
+            end
+            local status = (node.isRoot and "In bags: " .. node.total or "Allocated bags: " .. node.carried .. "/" .. node.needed)
+            if node.planned > 0 then status = status .. "; planned batch: " .. node.planned end
+            if node.casts then status = status .. "; " .. node.casts .. " cast(s), yield " ..
+                (node.recipe.min or 1) .. "-" .. (node.recipe.max or node.recipe.min or 1) end
+            row.meta:SetWidth(245 - indent)
+            row.meta:ClearAllPoints(); row.meta:SetPoint("TOPLEFT", row.text, "BOTTOMLEFT", 0, -4)
+            row.meta:SetText(status); row.meta:Show()
+            local reason = node.stopped
+            if not reason and node.recipe and addon.lastCraft and addon.lastCraft.spell == node.recipe.spell then
+                reason = addon.lastCraft.error and ("Last craft error: " .. addon.lastCraft.error)
+            end
+            if not reason and action then
+                local enabled = row.action:IsEnabled()
+                if not enabled or enabled == 0 then reason = row.action.reason end
+            end
+            if not reason and not node.recipe and not addon.herbs[node.item] then reason = "Raw material: gather, buy or obtain." end
+            row.blocker:SetWidth(245 - indent)
+            row.blocker:ClearAllPoints(); row.blocker:SetPoint("TOPLEFT", row.meta, "BOTTOMLEFT", 0, -4)
+            row.blocker:SetText(reason or "")
+            if reason then row.blocker:Show() else row.blocker:Hide() end
+            row:SetHeight(math.max(30, row.text:GetStringHeight() + row.meta:GetStringHeight() +
+                (reason and row.blocker:GetStringHeight() + 4 or 0) + 20))
+            if row.trunk and node.depth > 0 then
+                row.trunk:SetPoint("TOPRIGHT", row, "TOPLEFT", -9, 0)
+                row.trunk:SetHeight(row:GetHeight()); row.trunk:Show()
+            end
+        else
+            row:SetBackdrop(nil)
+            if row.meta then row.meta:Hide(); row.blocker:Hide() end
+            if hasLink then
+                row.text:ClearAllPoints(); row.text:SetPoint("LEFT", row, "LEFT", 27, 0)
+                row.icon:ClearAllPoints(); row.icon:SetPoint("LEFT", row, "LEFT", 0, 0)
+            end
+        end
         row:Show()
-        position = position + row:GetHeight()
-        if item and action == "craft" then
+        position = position + row:GetHeight() + (node and 5 or 0)
+        if not node and hasLink and (action == "craft" or action == "recipe") then
             local enabled = row.action:IsEnabled()
             if not enabled or enabled == 0 then
                 Row("Craft unavailable: " .. (row.action.reason or "Unknown reason."))
             end
         end
     end
-    Row("InkTrail - ink > pigment > herbs")
-    for _, group in ipairs(groups) do
+    if tree then
+        Row("CraftTrail - dependency tree (one cast)")
+        for _, node in ipairs(tree) do
+            Row(node.needed .. "x ", node.item, node.recipe and "recipe" or nil, nil, node)
+            if node.item and addon.herbs[node.item] then
+                Row("Mill any ONE herb below (5 per milling):")
+                for _, herb in ipairs(addon.herbs[node.item]) do Row(nil, herb, "mill") end
+            end
+        end
+    else
+      Row("InkTrail - ink > pigment > herbs")
+      for _, group in ipairs(groups) do
         Row(group.amount .. "x ", group.ink, "craft", group.pigmentCount)
         Row((group.amount * group.pigmentCount) .. "x pigment: ", group.pigment)
         Row("Mill any ONE herb below (5 per milling):")
         for _, herb in ipairs(group.herbs) do Row(nil, herb, "mill") end
         position = position + 6
+      end
+      Row("Milling yields vary. Hover for item/bank info.")
     end
-    Row("Milling yields vary. Hover for item/bank info.")
     panel:SetHeight(position)
     ResizeDetails()
     addon.ClipRows()
-    return missing
+    return missing or (addon.recipeCatalog and addon.recipeCatalog.incomplete)
 end
 
 local function Tick(self, elapsed)
@@ -240,6 +356,7 @@ local function Tick(self, elapsed)
     retryTime = 0
     local fresh = needsBuild
     needsBuild = false
+    if addon.RestoreRecipeSelection then addon.RestoreRecipeSelection() end
     local missing = addon.Refresh()
     ResizeDetails()
     retries = retries + 1
@@ -280,13 +397,28 @@ end
 driver:RegisterEvent("ADDON_LOADED")
 driver:RegisterEvent("TRADE_SKILL_SHOW")
 driver:RegisterEvent("TRADE_SKILL_UPDATE")
+driver:RegisterEvent("UI_ERROR_MESSAGE")
+driver:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 for _, event in ipairs({ "BAG_UPDATE", "ITEM_LOCK_CHANGED", "SPELL_UPDATE_COOLDOWN", "SKILL_LINES_CHANGED",
     "SPELLS_CHANGED", "PLAYER_REGEN_ENABLED", "UNIT_SPELLCAST_START", "UNIT_SPELLCAST_STOP",
     "UNIT_SPELLCAST_FAILED", "UNIT_SPELLCAST_INTERRUPTED", "UNIT_SPELLCAST_CHANNEL_START", "UNIT_SPELLCAST_CHANNEL_STOP" }) do
     driver:RegisterEvent(event)
 end
-driver:SetScript("OnEvent", function(self, event, unit)
+driver:SetScript("OnEvent", function(self, event, unit, detail)
     if string.match(event, "^UNIT_") and unit ~= "player" then return end
+    if addon.lastCraft then
+        if event == "UI_ERROR_MESSAGE" and GetTime() - addon.lastCraft.time < 3 then
+            addon.lastCraft.error = type(detail) == "string" and detail or (type(unit) == "string" and unit or nil)
+            addon.lastCraft.state = "rejected"
+        elseif detail == addon.lastCraft.name then
+            if event == "UNIT_SPELLCAST_START" then addon.lastCraft.state = "started"
+            elseif event == "UNIT_SPELLCAST_SUCCEEDED" then addon.lastCraft.state = "succeeded"
+            elseif event == "UNIT_SPELLCAST_FAILED" or event == "UNIT_SPELLCAST_INTERRUPTED" then addon.lastCraft.state = "failed" end
+        end
+    end
+    if addon.RecipeCatalog and (event == "TRADE_SKILL_SHOW" or event == "SPELLS_CHANGED" or
+        event == "SKILL_LINES_CHANGED" or event == "BAG_UPDATE" or event == "ITEM_LOCK_CHANGED" or
+        event == "SPELL_UPDATE_COOLDOWN" or event == "UNIT_SPELLCAST_STOP") then addon.recipeCatalog = nil end
     Attach()
     if panel and event ~= "ADDON_LOADED" and (TradeSkillFrame:IsShown() or event == "PLAYER_REGEN_ENABLED") then Schedule() end
 end)

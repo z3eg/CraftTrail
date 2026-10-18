@@ -70,7 +70,7 @@ function addon.UpdateWindow()
         TradeSkillFrame:SetMovable(true)
         TradeSkillFrame:SetClampedToScreen(true)
     end
-    if not IsInscription() then addon.ResetWindow(); return end
+    if not IsInscription() and not (addon.IsSupportedProfession and addon.IsSupportedProfession()) then addon.ResetWindow(); return end
     local settings = addon.WindowSettings()
     local position = settings.position
     if type(position) == "table" and type(position.x) == "number" and type(position.y) == "number" then
@@ -202,6 +202,7 @@ function addon.UpdateRecipeList()
 end
 
 SLASH_INKTRAIL1 = "/inktrail"
+SLASH_INKTRAIL2 = "/crafttrail"
 SlashCmdList.INKTRAIL = function(message)
     if InCombatLockdown() then return end
     local settings = addon.WindowSettings()

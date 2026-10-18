@@ -16,7 +16,7 @@ def rows(path):
     return [struct.unpack_from('<' + 'I' * fields, data, 20 + index * size) for index in range(count)]
 
 
-def generate(core, dbc):
+def generate(core, dbc, all_professions=False):
     skills = defaultdict(set)
     professions = {129, 164, 165, 171, 185, 186, 197, 202, 333, 755, 773}
     for row in rows(dbc / 'SkillLineAbility.dbc'):
@@ -42,6 +42,8 @@ def generate(core, dbc):
     # Include every Engineering output plus the transitive craftable components.
     wanted = {item for item, recipes in outputs.items() if any(recipe[1] == 202 for recipe in recipes)}
     engineering_count = len(wanted)
+    if all_professions:
+        wanted = set(outputs)
     pending, visited = list(wanted), set()
     while pending:
         item = pending.pop()
@@ -60,8 +62,11 @@ def generate(core, dbc):
         if match and int(match[1]) in visited:
             names[int(match[1])] = match[2].replace("\\'", "'").replace('\\\\', '\\')
     assert engineering_count > 100, f'Unexpected Engineering output count: {engineering_count}'
-    assert visited <= names.keys(), f'Missing item names: {visited - names.keys()}'
-    lines = ['-- Generated factual 3.3.5a crafting relationships; see tools/engineering-sources.json.',
+    missing_names = sorted(visited - names.keys())
+    if not all_professions:
+        assert not missing_names, f'Missing item names: {missing_names}'
+    manifest_name = 'profession-sources.json' if all_professions else 'engineering-sources.json'
+    lines = [f'-- Generated factual 3.3.5a crafting relationships; see tools/{manifest_name}.',
              'local addonName, addon = ...', 'addon.componentRecipes = {']
     for item in sorted(visited):
         if item not in outputs:
@@ -76,14 +81,18 @@ def generate(core, dbc):
         lines.append(f'    [{item}] = {json.dumps(name, ensure_ascii=False)},')
     lines.extend(['}', ''])
     addon = Path(__file__).resolve().parents[1]
-    (addon / 'EngineeringData.lua').write_text('\n'.join(lines), encoding='utf-8')
+    target = 'ProfessionData.lua' if all_professions else 'EngineeringData.lua'
+    (addon / target).write_text('\n'.join(lines), encoding='utf-8')
     inputs = [dbc / 'Spell.dbc', dbc / 'SkillLineAbility.dbc', sql]
     manifest = {'coreCommit': subprocess.check_output(['git', '-C', str(core), 'rev-parse', 'HEAD'], text=True).strip(),
                 'engineeringOutputs': engineering_count, 'referencedItems': len(visited),
                 'craftableItems': sum(item in outputs for item in visited),
+                'professionRecipeCounts': {str(skill): sum(recipe[1] == skill for recipes in outputs.values() for recipe in recipes)
+                                           for skill in sorted(professions)},
+                'missingSqlItemNames': missing_names,
                 'inputs': {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in inputs},
                 'note': 'Base SQL/DBC snapshot. All alternate recipes retained; no live database queried.'}
-    (addon / 'tools/engineering-sources.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+    (addon / 'tools' / manifest_name).write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
     print(f'Engineering outputs: {engineering_count}; referenced items: {len(visited)}.')
 
 
