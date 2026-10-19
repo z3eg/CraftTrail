@@ -20,8 +20,8 @@ local function IsInscription()
 end
 
 function addon.WindowSettings()
-    if type(InkTrailDB) ~= "table" then InkTrailDB = {} end
-    return InkTrailDB
+    if type(CraftTrailDB) ~= "table" then CraftTrailDB = {} end
+    return CraftTrailDB
 end
 
 function addon.ResetWindow()
@@ -131,12 +131,12 @@ function addon.UpdateRecipeList()
     if InCombatLockdown() then return end
     for row = 1, TRADE_SKILLS_DISPLAYED do
         local button = _G["TradeSkillSkill" .. row]
-        if button and button.inkTrailNamePoints then
+        if button and button.craftTrailNamePoints then
             local text = button:GetFontString()
             text:ClearAllPoints()
-            for _, point in ipairs(button.inkTrailNamePoints) do text:SetPoint(unpack(point)) end
-            button.inkTrailMinor:Hide()
-            button.inkTrailLevel:Hide()
+            for _, point in ipairs(button.craftTrailNamePoints) do text:SetPoint(unpack(point)) end
+            button.craftTrailMinor:Hide()
+            button.craftTrailLevel:Hide()
         end
     end
     if not IsInscription() then return end
@@ -156,25 +156,25 @@ function addon.UpdateRecipeList()
                     button:SetID(index)
                     button:SetText(name)
                     local text = button:GetFontString()
-                    if not button.inkTrailNamePoints then
-                        button.inkTrailNamePoints = {}
+                    if not button.craftTrailNamePoints then
+                        button.craftTrailNamePoints = {}
                         for n = 1, text:GetNumPoints() do
-                            button.inkTrailNamePoints[n] = { text:GetPoint(n) }
+                            button.craftTrailNamePoints[n] = { text:GetPoint(n) }
                         end
-                        button.inkTrailMinor = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-                        button.inkTrailMinor:SetPoint("LEFT", button, "LEFT", 0, 0)
-                        button.inkTrailMinor:SetWidth(12)
-                        button.inkTrailMinor:SetJustifyH("LEFT")
-                        button.inkTrailLevel = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                        button.inkTrailLevel:SetPoint("RIGHT", button, "RIGHT", -2, 0)
-                        button.inkTrailLevel:SetWidth(40)
-                        button.inkTrailLevel:SetJustifyH("RIGHT")
+                        button.craftTrailMinor = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+                        button.craftTrailMinor:SetPoint("LEFT", button, "LEFT", 0, 0)
+                        button.craftTrailMinor:SetWidth(12)
+                        button.craftTrailMinor:SetJustifyH("LEFT")
+                        button.craftTrailLevel = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                        button.craftTrailLevel:SetPoint("RIGHT", button, "RIGHT", -2, 0)
+                        button.craftTrailLevel:SetWidth(40)
+                        button.craftTrailLevel:SetJustifyH("RIGHT")
                     end
                     local kindFlag = addon.glyphTypes[item]
-                    button.inkTrailMinor:SetText(kindFlag == 1 and "m" or (kindFlag == 0 and "" or "?"))
-                    button.inkTrailMinor:Show()
-                    button.inkTrailLevel:SetText("Lv " .. level)
-                    button.inkTrailLevel:Show()
+                    button.craftTrailMinor:SetText(kindFlag == 1 and "m" or (kindFlag == 0 and "" or "?"))
+                    button.craftTrailMinor:Show()
+                    button.craftTrailLevel:SetText("Lv " .. level)
+                    button.craftTrailLevel:Show()
                     text:ClearAllPoints()
                     text:SetPoint("LEFT", button, "LEFT", 14, 0)
                     local color = TradeSkillTypeColor[kind]
@@ -201,16 +201,16 @@ function addon.UpdateRecipeList()
     if highlightShown then TradeSkillHighlightFrame:Show() else TradeSkillHighlightFrame:Hide() end
 end
 
-SLASH_INKTRAIL1 = "/inktrail"
-SLASH_INKTRAIL2 = "/crafttrail"
-SlashCmdList.INKTRAIL = function(message)
+SLASH_CRAFTTRAIL1 = "/crafttrail"
+SLASH_CRAFTTRAIL2 = "/inktrail"
+SlashCmdList.CRAFTTRAIL = function(message)
     if InCombatLockdown() then return end
     local settings = addon.WindowSettings()
     message = string.lower(string.match(message or "", "^%s*(.-)%s*$"))
     if message == "all" then addon.ShowAllRecipes(); return end
     if message == "why" then addon.ExplainCraftAvailability(); return end
     if message == "version" then
-        print("InkTrail version: " .. (GetAddOnMetadata(addonName, "Version") or "unknown"))
+        print("CraftTrail version: " .. (GetAddOnMetadata(addonName, "Version") or "unknown"))
         return
     end
     if message == "normal" then settings.tall = false

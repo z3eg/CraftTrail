@@ -49,7 +49,7 @@ function addon.LinkDescription(item, text)
 end
 
 function addon.ReadGlyphDescription(index)
-    if not scanner then scanner = CreateFrame("GameTooltip", "InkTrailDescriptionScan", UIParent, "GameTooltipTemplate") end
+    if not scanner then scanner = CreateFrame("GameTooltip", "CraftTrailDescriptionScan", UIParent, "GameTooltipTemplate") end
     scanner:SetOwner(UIParent, "ANCHOR_NONE")
     scanner:ClearLines()
     scanner:SetTradeSkillItem(index)
@@ -104,7 +104,7 @@ function addon.UpdateDescription(index)
         return false
     end
     if not field then
-        field = CreateFrame("SimpleHTML", "InkTrailGlyphDescription", TradeSkillDetailScrollChildFrame)
+        field = CreateFrame("SimpleHTML", "CraftTrailGlyphDescription", TradeSkillDetailScrollChildFrame)
         field:SetWidth(285)
         field:SetFontObject(GameFontHighlightSmall)
         field:SetPoint("TOPLEFT", TradeSkillDescription, "TOPLEFT", 0, 0)

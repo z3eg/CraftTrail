@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 
 # Optional existing dependency directory; normally install requirements-dev.txt.
-if os.environ.get("INKTRAIL_TEST_DEPS"):
-    sys.path.insert(0, os.environ["INKTRAIL_TEST_DEPS"])
+if os.environ.get("CRAFTTRAIL_TEST_DEPS"):
+    sys.path.insert(0, os.environ["CRAFTTRAIL_TEST_DEPS"])
 from lupa.lua51 import LuaRuntime
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -219,8 +219,8 @@ function TradeSkillFrame_Update() end
 '''
 lua.execute(harness)
 addon = lua.table()
-for name in ("Data.lua", "Actions.lua", "Progress.lua", "Description.lua", "Window.lua", "InkTrail.lua"):
-    lua.execute((ROOT / name).read_text(encoding="utf-8"), "InkTrail", addon)
+for name in ("Data.lua", "Actions.lua", "Progress.lua", "Description.lua", "Window.lua", "CraftTrail.lua"):
+    lua.execute((ROOT / name).read_text(encoding="utf-8"), "CraftTrail", addon)
 lua.globals().addon = addon
 lua.execute(r'''
 function Check(value, message) assert(value, message) end
@@ -248,7 +248,7 @@ Check(groups[1].pigment == 39338 and groups[1].pigmentCount == 2 and groups[1].a
 local herbs = {}; for _, id in ipairs(groups[1].herbs) do herbs[id] = true end
 Check(#groups[1].herbs == 4 and herbs[3369] and herbs[3356] and herbs[3357] and herbs[3355], 'Lions Ink herbs')
 Tick()
-Check(InkTrailDetails:IsShown(), 'inline panel visibility')
+Check(CraftTrailDetails:IsShown(), 'inline panel visibility')
 Check(TradeSkillDetailScrollChildFrame:GetHeight() > 150, 'scrollable detail expansion')
 local rows = VisibleItems()
 Check(#rows == 6, 'ink, pigment and four herb item rows')
@@ -265,14 +265,14 @@ rows[3].scripts.OnLeave(rows[3]); Check(not GameTooltip:IsShown(), 'tooltip hide
 selection = 2; hooks.TradeSkillFrame_SetSelection(); Tick()
 Check(addon.BuildGroups(2)[1].pigmentCount == 4, 'selected ink uses live pigment recipe')
 selection = 4; hooks.TradeSkillFrame_SetSelection(); Tick()
-Check(#addon.BuildGroups(4) == 2 and InkTrailRowitem9 and InkTrailRowitem9.used, 'multiple ink groups')
+Check(#addon.BuildGroups(4) == 2 and CraftTrailRowitem9 and CraftTrailRowitem9.used, 'multiple ink groups')
 selection = 3; hooks.TradeSkillFrame_SetSelection(); Tick()
-Check(not InkTrailDetails:IsShown() and TradeSkillDetailScrollChildFrame:GetHeight() == 150, 'unrelated recipe cleanup')
+Check(not CraftTrailDetails:IsShown() and TradeSkillDetailScrollChildFrame:GetHeight() == 150, 'unrelated recipe cleanup')
 Check(#addon.BuildGroups(0) == 0 and #addon.BuildGroups(5) == 0, 'invalid and header selection')
 selection = 1; line = 'Alchemy'; hooks.TradeSkillFrame_Update(); Tick()
-Check(not InkTrailDetails:IsShown(), 'other profession hidden')
+Check(not CraftTrailDetails:IsShown(), 'other profession hidden')
 line = 'Inscription'; cold = true; hooks.TradeSkillFrame_SetSelection(); Tick()
-Check(InkTrailDetails:IsShown() and InkTrailItemCache.tooltipCalls > 0, 'cold cache requested')
+Check(CraftTrailDetails:IsShown() and CraftTrailItemCache.tooltipCalls > 0, 'cold cache requested')
 rows = VisibleItems()
 Check(string.find(rows[3].text.textValue, '|Hitem:', 1, true), 'cold cache native fallback link')
 cold = false; Tick()
@@ -281,7 +281,7 @@ cold = true; hooks.TradeSkillFrame_SetSelection()
 for n = 1, 20 do Tick() end
 for _, frame in ipairs(frames) do Check(not frame.scripts.OnUpdate, 'bounded retries stop') end
 TradeSkillFrame:Hide(); TradeSkillFrame.scripts.OnHide()
-Check(not InkTrailDetails:IsShown() and TradeSkillDetailScrollChildFrame:GetHeight() == 150, 'close cleanup')
+Check(not CraftTrailDetails:IsShown() and TradeSkillDetailScrollChildFrame:GetHeight() == 150, 'close cleanup')
 Check(selection == 1, 'recipe selection preserved')
 ''')
 print("Lua 5.1 addon tests passed: data coverage, recipe drilldown, native links/tooltips, scrolling, cache retries and cleanup.")
@@ -344,23 +344,23 @@ addon.Refresh()
 TradeSkillFrame.scripts.OnHide()
 combat = false
 
-SlashCmdList.INKTRAIL('normal')
+SlashCmdList.CRAFTTRAIL('normal')
 Check(TradeSkillFrame:GetHeight() == 512 and TradeSkillDetailScrollFrame:GetHeight() == 152, 'normal height option')
-SlashCmdList.INKTRAIL('tall')
+SlashCmdList.CRAFTTRAIL('tall')
 Check(TradeSkillFrame:GetHeight() == 768, 'tall height option')
 local drag
 for _, frame in ipairs(frames) do if frame.scripts.OnDragStart then drag = frame end end
 Check(drag and TradeSkillFrame.movable, 'header drag available')
 drag.scripts.OnDragStart(); Check(TradeSkillFrame.moving, 'drag starts')
 drag.scripts.OnDragStop()
-Check(InkTrailDB.position and TradeSkillFrame.userPlaced and not TradeSkillFrame.moving, 'position saved on drag stop')
-local savedX, savedY = InkTrailDB.position.x, InkTrailDB.position.y
+Check(CraftTrailDB.position and TradeSkillFrame.userPlaced and not TradeSkillFrame.moving, 'position saved on drag stop')
+local savedX, savedY = CraftTrailDB.position.x, CraftTrailDB.position.y
 addon.UpdateWindow()
 Check(TradeSkillFrame.point[4] == savedX and TradeSkillFrame.point[5] == savedY, 'saved position restored')
 line = 'Alchemy'; addon.UpdateWindow()
 Check(TradeSkillFrame:GetHeight() == 512 and TradeSkillDetailScrollFrame:GetHeight() == 176, 'other professions retain normal height')
-line = 'Inscription'; SlashCmdList.INKTRAIL('reset')
-Check(InkTrailDB.position == nil, 'position reset available')
+line = 'Inscription'; SlashCmdList.CRAFTTRAIL('reset')
+Check(CraftTrailDB.position == nil, 'position reset available')
 
 local savedRecipes = recipes
 recipes = {
@@ -377,19 +377,19 @@ Check(order[1] == 1 and order[2] == 3 and order[3] == 2 and order[4] == 4 and or
     'ascending levels within headers, non-glyph slots preserved')
 selection = 3; addon.UpdateRecipeList()
 Check(TradeSkillSkill2.id == 3 and TradeSkillSkill3.id == 2, 'sorted rows retain original recipe indices')
-Check(TradeSkillSkill2.inkTrailLevel.textValue == 'Lv 15', 'visible required character level')
+Check(TradeSkillSkill2.craftTrailLevel.textValue == 'Lv 15', 'visible required character level')
 Check(TradeSkillSkill2.highlight and TradeSkillHighlightFrame:IsShown(), 'sorted selection highlight')
 scrollOffset = 5; selection = 7; addon.UpdateRecipeList()
-Check(TradeSkillSkill1.id == 7 and TradeSkillSkill1.inkTrailLevel.textValue == 'Lv 15', 'sorted scrolled rows')
+Check(TradeSkillSkill1.id == 7 and TradeSkillSkill1.craftTrailLevel.textValue == 'Lv 15', 'sorted scrolled rows')
 scrollOffset = 0
 recipes[3].output = 43316; recipes[3].name = 'Minor glyph'
 addon.UpdateRecipeList()
-Check(TradeSkillSkill2.inkTrailMinor.textValue == 'm', 'minor glyph lowercase marker')
-Check(TradeSkillSkill3.inkTrailMinor.textValue == '', 'major glyph has no marker')
+Check(TradeSkillSkill2.craftTrailMinor.textValue == 'm', 'minor glyph lowercase marker')
+Check(TradeSkillSkill3.craftTrailMinor.textValue == '', 'major glyph has no marker')
 Check(TradeSkillSkill2:GetFontString().point[4] == 14 and TradeSkillSkill3:GetFontString().point[4] == 14,
     'minor and major names share a fixed alignment column')
 line = 'Alchemy'; addon.UpdateRecipeList()
-Check(not TradeSkillSkill2.inkTrailMinor:IsShown() and not TradeSkillSkill2.inkTrailLevel:IsShown(), 'annotations removed outside Inscription')
+Check(not TradeSkillSkill2.craftTrailMinor:IsShown() and not TradeSkillSkill2.craftTrailLevel:IsShown(), 'annotations removed outside Inscription')
 line = 'Inscription'
 recipes = savedRecipes; selection = 1; scrollOffset = 0
 ''')
@@ -397,20 +397,20 @@ print("Action eligibility, stale-slot click validation, combat guards, taller vi
 
 late = LuaRuntime(unpack_returned_tuples=True)
 late.execute(harness)
-late.execute("InkTrailDB = {tall = false, position = {x = 77, y = -88}}")
+late.execute("CraftTrailDB = {tall = false, position = {x = 77, y = -88}}")
 late.execute("savedChild = TradeSkillDetailScrollChildFrame; TradeSkillDetailScrollChildFrame = nil")
 late_addon = late.table()
-for name in ("Data.lua", "Actions.lua", "Progress.lua", "Description.lua", "Window.lua", "InkTrail.lua"):
-    late.execute((ROOT / name).read_text(encoding="utf-8"), "InkTrail", late_addon)
-late.execute("assert(InkTrailDetails == nil); TradeSkillDetailScrollChildFrame = savedChild")
-late.execute("for _, frame in ipairs(frames) do if frame.events.ADDON_LOADED then frame.scripts.OnEvent(frame, 'ADDON_LOADED', 'Blizzard_TradeSkillUI') end end; assert(InkTrailDetails and hooks.TradeSkillFrame_SetSelection)")
+for name in ("Data.lua", "Actions.lua", "Progress.lua", "Description.lua", "Window.lua", "CraftTrail.lua"):
+    late.execute((ROOT / name).read_text(encoding="utf-8"), "CraftTrail", late_addon)
+late.execute("assert(CraftTrailDetails == nil); TradeSkillDetailScrollChildFrame = savedChild")
+late.execute("for _, frame in ipairs(frames) do if frame.events.ADDON_LOADED then frame.scripts.OnEvent(frame, 'ADDON_LOADED', 'Blizzard_TradeSkillUI') end end; assert(CraftTrailDetails and hooks.TradeSkillFrame_SetSelection)")
 print("Late-loading Blizzard profession UI attachment passed.")
 late.execute("for _, frame in ipairs(frames) do if frame.scripts.OnUpdate then frame.scripts.OnUpdate(frame, 0.6) end end; assert(TradeSkillFrame:GetHeight() == 512 and TradeSkillFrame.point[4] == 77 and TradeSkillFrame.point[5] == -88)")
 print("Preloaded saved window settings restored in a fresh Lua runtime.")
 
 lua.execute(r'''
 line = 'Inscription'; skill = 375; selection = 1; cold = false
-TradeSkillFrame:Show(); SlashCmdList.INKTRAIL('tall')
+TradeSkillFrame:Show(); SlashCmdList.CRAFTTRAIL('tall')
 local originalKnown, originalBagInfo = IsSpellKnown, GetContainerItemInfo
 IsSpellKnown = function() return 0 end
 GetNumSpellTabs = function() return 1 end
@@ -436,8 +436,8 @@ end
 Check(mill and mill.enabled, '91 Kingsblood enables Milling with legacy zero flags and spellbook knowledge')
 Check(TradeSkillCreateButton:GetTop() < TradeSkillDetailScrollFrame:GetBottom(), 'Create stays below the expanded viewport')
 Check(TradeSkillCancelButton:GetTop() < TradeSkillDetailScrollFrame:GetBottom(), 'Exit stays below the expanded viewport')
-Check(InkTrailDetails:GetLeft() == TradeSkillDetailScrollChildFrame:GetLeft() + 5, 'reference anchored to left edge rather than second reagent column')
-Check(InkTrailDetails.point[2] == TradeSkillDetailScrollChildFrame, 'reference belongs geometrically to scroll child')
+Check(CraftTrailDetails:GetLeft() == TradeSkillDetailScrollChildFrame:GetLeft() + 5, 'reference anchored to left edge rather than second reagent column')
+Check(CraftTrailDetails.point[2] == TradeSkillDetailScrollChildFrame, 'reference belongs geometrically to scroll child')
 TradeSkillDetailScrollChildFrame:SetPoint('TOPLEFT', TradeSkillDetailScrollFrame, 'TOPLEFT', 0, 200)
 TradeSkillDetailScrollFrame.scripts.OnVerticalScroll()
 local hidden = 0
@@ -465,7 +465,7 @@ Check(TradeSkillCreateButton.point[3] == 'TOPLEFT' and TradeSkillCreateButton.po
 print("Screenshot regressions passed: toolbar geometry, bounded row hit areas, unique buttons, and 91 Kingsblood with legacy API flags.")
 
 lua.execute(r'''
-line = 'Inscription'; selection = 1; SlashCmdList.INKTRAIL('tall'); addon.Refresh()
+line = 'Inscription'; selection = 1; SlashCmdList.CRAFTTRAIL('tall'); addon.Refresh()
 local rows, actions, labels = VisibleItems(), 0, {}
 for _, row in ipairs(rows) do
     if row.hasAction then
@@ -478,8 +478,8 @@ for _, row in ipairs(rows) do
     end
 end
 Check(actions == 5, 'one Craft and four Mill buttons for Lions Ink')
-Check(InkTrailCastBar:GetTop() < TradeSkillDetailScrollFrame:GetBottom(), 'cast bar below details viewport')
-Check(InkTrailCastBar:GetBottom() > TradeSkillCreateButton:GetTop(), 'cast bar above native toolbar')
+Check(CraftTrailCastBar:GetTop() < TradeSkillDetailScrollFrame:GetBottom(), 'cast bar below details viewport')
+Check(CraftTrailCastBar:GetBottom() > TradeSkillCreateButton:GetTop(), 'cast bar above native toolbar')
 local now, liveCast, liveChannel = 100, nil, nil
 local originalTime, originalCasting, originalChannel = GetTime, UnitCastingInfo, UnitChannelInfo
 GetTime = function() return now end
@@ -490,34 +490,34 @@ UnitChannelInfo = function()
     if liveChannel then return liveChannel.name, '', liveChannel.name, 'icon', liveChannel.start, liveChannel.finish end
 end
 liveCast = {name = 'Milling', start = 100000, finish = 103000}
-InkTrailCastBar.scripts.OnEvent(InkTrailCastBar, 'UNIT_SPELLCAST_START', 'player')
-now = 101; InkTrailCastBar.scripts.OnUpdate(InkTrailCastBar, 1)
-Check(InkTrailCastBar.value == 1 and InkTrailCastBar.maximum == 3, 'cast progress uses live start/end timestamps')
-Check(string.find(InkTrailCastBar.label.textValue, '2.0s', 1, true), 'remaining cast time displayed')
+CraftTrailCastBar.scripts.OnEvent(CraftTrailCastBar, 'UNIT_SPELLCAST_START', 'player')
+now = 101; CraftTrailCastBar.scripts.OnUpdate(CraftTrailCastBar, 1)
+Check(CraftTrailCastBar.value == 1 and CraftTrailCastBar.maximum == 3, 'cast progress uses live start/end timestamps')
+Check(string.find(CraftTrailCastBar.label.textValue, '2.0s', 1, true), 'remaining cast time displayed')
 liveCast.finish = 105000
-InkTrailCastBar.scripts.OnEvent(InkTrailCastBar, 'UNIT_SPELLCAST_DELAYED', 'player')
-Check(InkTrailCastBar.maximum == 5, 'delayed cast adjusts actual duration')
+CraftTrailCastBar.scripts.OnEvent(CraftTrailCastBar, 'UNIT_SPELLCAST_DELAYED', 'player')
+Check(CraftTrailCastBar.maximum == 5, 'delayed cast adjusts actual duration')
 liveCast = nil
-InkTrailCastBar.scripts.OnEvent(InkTrailCastBar, 'UNIT_SPELLCAST_INTERRUPTED', 'player')
-InkTrailCastBar.scripts.OnEvent(InkTrailCastBar, 'UNIT_SPELLCAST_STOP', 'player')
-Check(InkTrailCastBar.label.textValue == 'Interrupted', 'interrupt status survives following stop event')
-now = 102.1; InkTrailCastBar.scripts.OnUpdate(InkTrailCastBar, 1.1)
-Check(InkTrailCastBar.label.textValue == 'Ready' and InkTrailCastBar.scripts.OnUpdate == nil, 'idle stops progress updates')
-InkTrailCastBar.scripts.OnEvent(InkTrailCastBar, 'UNIT_SPELLCAST_SUCCEEDED', 'player')
-Check(InkTrailCastBar.label.textValue == 'Complete' and InkTrailCastBar.value == 1, 'success feedback comes from actual success event')
-now = 103; InkTrailCastBar.scripts.OnUpdate(InkTrailCastBar, 0.9)
-Check(InkTrailCastBar.label.textValue == 'Ready', 'completion feedback expires')
+CraftTrailCastBar.scripts.OnEvent(CraftTrailCastBar, 'UNIT_SPELLCAST_INTERRUPTED', 'player')
+CraftTrailCastBar.scripts.OnEvent(CraftTrailCastBar, 'UNIT_SPELLCAST_STOP', 'player')
+Check(CraftTrailCastBar.label.textValue == 'Interrupted', 'interrupt status survives following stop event')
+now = 102.1; CraftTrailCastBar.scripts.OnUpdate(CraftTrailCastBar, 1.1)
+Check(CraftTrailCastBar.label.textValue == 'Ready' and CraftTrailCastBar.scripts.OnUpdate == nil, 'idle stops progress updates')
+CraftTrailCastBar.scripts.OnEvent(CraftTrailCastBar, 'UNIT_SPELLCAST_SUCCEEDED', 'player')
+Check(CraftTrailCastBar.label.textValue == 'Complete' and CraftTrailCastBar.value == 1, 'success feedback comes from actual success event')
+now = 103; CraftTrailCastBar.scripts.OnUpdate(CraftTrailCastBar, 0.9)
+Check(CraftTrailCastBar.label.textValue == 'Ready', 'completion feedback expires')
 liveChannel = {name = 'Channel', start = 103000, finish = 105000}
-InkTrailCastBar.scripts.OnEvent(InkTrailCastBar, 'UNIT_SPELLCAST_CHANNEL_START', 'player')
-now = 104; InkTrailCastBar.scripts.OnUpdate(InkTrailCastBar, 1)
-Check(InkTrailCastBar.value == 1 and InkTrailCastBar.maximum == 2, 'channel progress supported')
-InkTrailCastBar.scripts.OnEvent(InkTrailCastBar, 'UNIT_SPELLCAST_FAILED', 'party1')
-Check(string.find(InkTrailCastBar.label.textValue, 'Channel', 1, true), 'other players do not change cast bar')
+CraftTrailCastBar.scripts.OnEvent(CraftTrailCastBar, 'UNIT_SPELLCAST_CHANNEL_START', 'player')
+now = 104; CraftTrailCastBar.scripts.OnUpdate(CraftTrailCastBar, 1)
+Check(CraftTrailCastBar.value == 1 and CraftTrailCastBar.maximum == 2, 'channel progress supported')
+CraftTrailCastBar.scripts.OnEvent(CraftTrailCastBar, 'UNIT_SPELLCAST_FAILED', 'party1')
+Check(string.find(CraftTrailCastBar.label.textValue, 'Channel', 1, true), 'other players do not change cast bar')
 liveChannel = nil
-InkTrailCastBar.scripts.OnEvent(InkTrailCastBar, 'UNIT_SPELLCAST_FAILED', 'player')
-Check(InkTrailCastBar.label.textValue == 'Cast failed', 'failed cast feedback')
+CraftTrailCastBar.scripts.OnEvent(CraftTrailCastBar, 'UNIT_SPELLCAST_FAILED', 'player')
+Check(CraftTrailCastBar.label.textValue == 'Cast failed', 'failed cast feedback')
 line = 'Alchemy'; addon.Refresh()
-Check(not InkTrailCastBar:IsShown() and InkTrailCastBar.scripts.OnUpdate == nil, 'cast bar hidden and idle outside Inscription')
+Check(not CraftTrailCastBar:IsShown() and CraftTrailCastBar.scripts.OnUpdate == nil, 'cast bar hidden and idle outside Inscription')
 GetTime, UnitCastingInfo, UnitChannelInfo = originalTime, originalCasting, originalChannel
 ''')
 print("All action-button labels/visibility and live-timestamp cast-bar lifecycle tests passed.")
@@ -541,7 +541,7 @@ recipes[1].output = 41095
 recipes[1].tooltip = {'Glyph of Hammer of Justice', 'Classes: Paladin', 'Requires Level 15',
     '|cff00ff00Use: Increases your Hammer of Justice range by 5 yards.|r'}
 line = 'Inscription'; selection = 1; addon.Refresh()
-local description = InkTrailGlyphDescription
+local description = CraftTrailGlyphDescription
 Check(description:IsShown() and description.hyperlinksEnabled, 'always-visible interactive description')
 Check(string.find(description.textValue, '|Hspell:853|hHammer of Justice|h', 1, true), 'ability becomes an inline native spell link')
 Check(not string.find(description.textValue, 'Classes:', 1, true), 'tooltip metadata excluded')
@@ -662,10 +662,10 @@ Check(reasonFound, 'disabled craft reason is visible without hovering')
 local savedPrint, messages = print, {}
 print = function(text) messages[#messages + 1] = text end
 GetAddOnMetadata = function() return '1.3.2' end
-SlashCmdList.INKTRAIL('why')
+SlashCmdList.CRAFTTRAIL('why')
 Check(#messages == 2 and string.find(messages[2], 'DISABLED', 1, true), 'why command reports exact blocker')
-SlashCmdList.INKTRAIL('version')
-Check(messages[3] == 'InkTrail version: 1.3.2', 'version command reports installed metadata')
+SlashCmdList.CRAFTTRAIL('version')
+Check(messages[3] == 'CraftTrail version: 1.3.2', 'version command reports installed metadata')
 print = savedPrint
 recipes, bags = savedRecipes, savedBags
 IsSpellKnown, GetSpellCooldown = savedKnown, savedCooldown

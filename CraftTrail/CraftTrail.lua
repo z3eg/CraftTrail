@@ -4,7 +4,7 @@ local panel, originalHeight, panelOffset
 local widgets = {}
 local needsBuild, retryTime, retries = false, 0, 0
 local requested = {}
-local cacheTooltip = CreateFrame("GameTooltip", "InkTrailItemCache", UIParent, "GameTooltipTemplate")
+local cacheTooltip = CreateFrame("GameTooltip", "CraftTrailItemCache", UIParent, "GameTooltipTemplate")
 cacheTooltip:Hide()
 
 function addon.ItemID(link)
@@ -63,7 +63,7 @@ function addon.ExplainCraftAvailability()
     end
     local groups = addon.BuildGroups(GetTradeSkillSelectionIndex())
     local version = GetAddOnMetadata and GetAddOnMetadata(addonName, "Version") or "unknown"
-    print("InkTrail " .. version .. " Craft checks:")
+    print("CraftTrail " .. version .. " Craft checks:")
     if #groups == 0 then print("Select an Inscription glyph or ink recipe first.") end
     for _, group in ipairs(groups) do
         local enabled, reason = addon.ActionState("craft", group.ink, {}, group.pigmentCount)
@@ -97,7 +97,7 @@ end
 local function GetWidget(index, item)
     local key = (item and "item" or "label") .. index
     if widgets[key] then return widgets[key] end
-    local row = CreateFrame(item and "Button" or "Frame", "InkTrailRow" .. key, panel)
+    local row = CreateFrame(item and "Button" or "Frame", "CraftTrailRow" .. key, panel)
     row:SetFrameLevel(panel:GetFrameLevel() + 1)
     row:SetWidth(285)
     row:SetHeight(item and 26 or 20)
@@ -334,7 +334,7 @@ function addon.Refresh()
             end
         end
     else
-      Row("InkTrail - ink > pigment > herbs")
+      Row("CraftTrail - ink > pigment > herbs")
       for _, group in ipairs(groups) do
         Row(group.amount .. "x ", group.ink, "craft", group.pigmentCount)
         Row((group.amount * group.pigmentCount) .. "x pigment: ", group.pigment)
@@ -376,7 +376,7 @@ end
 local function Attach()
     if InCombatLockdown() or panel or not TradeSkillDetailScrollChildFrame or not TradeSkillFrame_SetSelection then return end
     originalHeight = TradeSkillDetailScrollChildFrame:GetHeight()
-    panel = CreateFrame("Frame", "InkTrailDetails", TradeSkillDetailScrollChildFrame)
+    panel = CreateFrame("Frame", "CraftTrailDetails", TradeSkillDetailScrollChildFrame)
     panel:SetFrameLevel(TradeSkillDetailScrollChildFrame:GetFrameLevel() + 1)
     panel:SetWidth(289)
     panel:Hide()

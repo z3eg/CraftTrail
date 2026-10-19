@@ -4,8 +4,8 @@ import os
 import sys
 from pathlib import Path
 
-if os.environ.get('INKTRAIL_TEST_DEPS'):
-    sys.path.insert(0, os.environ['INKTRAIL_TEST_DEPS'])
+if os.environ.get('CRAFTTRAIL_TEST_DEPS'):
+    sys.path.insert(0, os.environ['CRAFTTRAIL_TEST_DEPS'])
 from lupa.lua51 import LuaRuntime
 
 root = Path(__file__).resolve().parents[1]
@@ -96,10 +96,11 @@ function Check(value, message) assert(value, message) end
 ''')
 addon = lua.table()
 lua.globals().addon = addon
-for line in (root / 'InkTrail.toc').read_text().splitlines():
+for line in (root / 'CraftTrail.toc').read_text().splitlines():
     if line.endswith('.lua'):
-        lua.execute((root / line).read_text(encoding='utf-8'), 'InkTrail', addon)
+        lua.execute((root / line).read_text(encoding='utf-8'), 'CraftTrail', addon)
 lua.execute(r'''
+Check(SLASH_CRAFTTRAIL1=='/crafttrail' and SLASH_CRAFTTRAIL2=='/inktrail', 'slash command identity/legacy alias')
 -- Actual button dispatch with the ink hidden by a class filter AND a collapsed header.
 local glyph = Recipe(1111,40897,{{39774,1},{39354,1}},1)
 local ink = Recipe(53462,39774,{{39334,2}},2)
@@ -208,7 +209,7 @@ for index,profession in ipairs(professions) do
  Setup({r},profession,{{id=9999,count=2}}); addon.recipeCatalog=nil
  Check(addon.IsSupportedProfession(), 'unsupported profession '..profession)
  addon.Refresh()
- Check(InkTrailDetails:IsShown(), 'tree not rendered for '..profession)
+ Check(CraftTrailDetails:IsShown(), 'tree not rendered for '..profession)
  before=#casts; Check(addon.NativeCraft(spell,r.output), 'native action rejected '..profession)
  Check(#casts==before+1 and casts[#casts]==spell, 'wrong native recipe for '..profession)
 end
@@ -242,7 +243,7 @@ for _,profession in ipairs(professions) do
  Check(GetNumTradeSkills()==25, 'native craft hid other recipes')
  editText='Search'; SetTradeSkillItemNameFilter('Search')
  Check(GetNumTradeSkills()==1, 'fixture must reproduce single-recipe filter')
- SlashCmdList.INKTRAIL('all')
+ SlashCmdList.CRAFTTRAIL('all')
  Check(GetNumTradeSkills()==25 and not makeable and subFilter==0 and slotFilter==0,
   'show-all command failed for '..profession)
  -- A genuine text search still survives catalog scans.

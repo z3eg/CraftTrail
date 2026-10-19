@@ -60,7 +60,7 @@ end
 
 function addon.ShowCastBar()
     if not bar then
-        bar = CreateFrame("StatusBar", "InkTrailCastBar", TradeSkillFrame)
+        bar = CreateFrame("StatusBar", "CraftTrailCastBar", TradeSkillFrame)
         bar:SetWidth(322)
         bar:SetHeight(14)
         bar:SetPoint("BOTTOMLEFT", TradeSkillFrame, "BOTTOMLEFT", 22, 108)

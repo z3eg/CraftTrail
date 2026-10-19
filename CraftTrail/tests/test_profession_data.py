@@ -4,15 +4,15 @@ import os
 import sys
 from pathlib import Path
 
-if os.environ.get('INKTRAIL_TEST_DEPS'):
-    sys.path.insert(0, os.environ['INKTRAIL_TEST_DEPS'])
+if os.environ.get('CRAFTTRAIL_TEST_DEPS'):
+    sys.path.insert(0, os.environ['CRAFTTRAIL_TEST_DEPS'])
 from lupa.lua51 import LuaRuntime
 
 root = Path(__file__).resolve().parents[1]
 manifest = json.loads((root / 'tools/profession-sources.json').read_text())
 lua = LuaRuntime()
 addon = lua.table()
-lua.execute((root / 'ProfessionData.lua').read_text(encoding='utf-8'), 'InkTrail', addon)
+lua.execute((root / 'ProfessionData.lua').read_text(encoding='utf-8'), 'CraftTrail', addon)
 lua.globals().addon = addon
 counts, items = lua.execute('''
 local counts, items = {}, 0

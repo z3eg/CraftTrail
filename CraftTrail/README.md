@@ -1,11 +1,11 @@
-# InkTrail
+# CraftTrail
 
-## Version 2.0.2: native Craft and all-profession dependency trees
+## Version 2.1.0: CraftTrail identity
 
-The in-game title is now **CraftTrail (InkTrail)**; the folder, saved variables
-and old slash commands remain compatible. Replace the existing InkTrail folder
-and restart. The same tree style now applies to all eleven recipe professions.
-See the repository README for the list and install/test instructions.
+The add-on is now **CraftTrail**, including its folder, TOC, UI objects and
+saved-variable name. Remove the old InkTrail add-on folder before installing.
+See the repository README for optional saved-settings migration instructions.
+`/crafttrail` is the primary command; `/inktrail` remains an alias.
 
 Craft now resolves the learned recipe and calls `DoTradeSkill(index, 1)` through
 the secure button's hardware-click macro, matching the stock 3.3.5 profession
@@ -43,8 +43,8 @@ still validates learned recipe, tools and other requirements. This is not an
 automatic craft or a bypass of game requirements.
 
 Disabled ink actions now show the actual blocker beneath their row. Use
-`/inktrail why` to print the selected recipe's ink checks and pigment counts,
-or `/inktrail version` to print the installed version. Offline tests reproduce
+`/crafttrail why` to print the selected recipe's ink checks and pigment counts,
+or `/crafttrail version` to print the installed version. Offline tests reproduce
 the hidden-Midnight-Ink case with five Dusky Pigment and zero spell knowledge.
 The real-client click still needs verification.
 
@@ -140,7 +140,7 @@ Adds an ink → pigment → milling herbs reference **inside the default
 Inscription recipe details**, underneath the ordinary reagents. Scroll the recipe
 details down to see the whole reference.
 
-Select a glyph and InkTrail shows:
+Select a glyph and CraftTrail shows:
 
 - Its required ink, as an item icon and native item link.
 - The pigment and quantity needed to make that ink for one recipe craft.
@@ -154,7 +154,7 @@ itself also shows its pigment and herbs. All 15 Wrath inks are included.
 
 Hover any item for the ordinary game item tooltip. Existing tooltip addons can
 append their bank, guild-bank or alternate-character counts through their normal
-hooks. InkTrail does not maintain another inventory database or query a guild bank.
+hooks. CraftTrail does not maintain another inventory database or query a guild bank.
 Those counts remain dependent on the other addon's saved inventory information.
 Shift-click a row to insert its item link into an active chat box; ordinary click
 opens the item reference tooltip. Names and icons use the client's localized item
@@ -190,11 +190,11 @@ cache, with English names and a question-mark icon as a temporary fallback.
 Inscription opens about **1.5 times its normal height**, increasing the recipe
 details viewport rather than enlarging the text. It is limited by available screen
 space. The recipe list remains eight rows high. Drag the window by its title/header;
-its position and size preference are saved between sessions using `InkTrailDB`.
+its position and size preference are saved between sessions using `CraftTrailDB`.
 
-- `/inktrail normal` restores the normal height.
-- `/inktrail tall` enables the taller view again.
-- `/inktrail reset` clears the saved position and returns to the default location.
+- `/crafttrail normal` restores the normal height.
+- `/crafttrail tall` enables the taller view again.
+- `/crafttrail reset` clears the saved position and returns to the default location.
 
 Other professions return to their normal window height. Size/position changes are
 made outside combat.
@@ -203,9 +203,9 @@ made outside combat.
 
 1. Exit the WoW client before installing this new addon.
 2. Extract the release ZIP into your game's `Interface/AddOns` directory. The
-   final layout must be `Interface/AddOns/InkTrail/InkTrail.toc` (no extra nested
+   final layout must be `Interface/AddOns/CraftTrail/CraftTrail.toc` (no extra nested
    directory).
-3. Relaunch WoW, enable **InkTrail** in the character selection AddOns list, and
+3. Relaunch WoW, enable **CraftTrail** in the character selection AddOns list, and
    open Inscription. Select a glyph and scroll down in its recipe details.
 
 No server rebuild, server restart, SQL import or PlayerBots change is required.
