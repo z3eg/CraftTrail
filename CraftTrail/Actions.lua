@@ -16,6 +16,7 @@ local function KnowsSpell(id)
     end
     return false
 end
+addon.KnowsSpell = KnowsSpell
 
 local function Blocked()
     if InCombatLockdown() then return "Unavailable in combat." end
@@ -64,6 +65,10 @@ function addon.ActionState(kind, id, stacks, pigmentCount, recipeSpell)
     if addon.NativeCraftState and (kind == "craft" or kind == "recipe") then
         local spell = recipeSpell or (addon.inks[id] and addon.inks[id].spell)
         local ready, why = addon.NativeCraftState(spell, id)
+        if ready and addon.CrossCraftMacro then
+            local macro = addon.CrossCraftMacro(spell, id)
+            if macro then return true, why, macro end
+        end
         return ready, why, ready and ("/run CraftTrail_Craft(" .. (spell or 0) .. "," .. (id or 0) .. ")") or nil
     end
     if kind == "craft" then

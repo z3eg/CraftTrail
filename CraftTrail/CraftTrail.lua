@@ -180,6 +180,7 @@ function addon.Refresh()
         return false
     end
     local index = GetTradeSkillSelectionIndex()
+    if GetNumTradeSkills() == 0 then return true end
     local descriptionMissing = isInscription and addon.UpdateDescription(index) or false
     if not isInscription then addon.RestoreDescription(index) end
     local tree = addon.BuildDependencyTree and addon.BuildDependencyTree(index)
@@ -323,9 +324,30 @@ function addon.Refresh()
                 Row("Craft unavailable: " .. (row.action.reason or "Unknown reason."))
             end
         end
+        return row
     end
     if tree then
-        Row("CraftTrail - dependency tree (one cast)")
+        local heading = Row(addon.crossRoot and "CraftTrail - original recipe" or "CraftTrail - dependency tree (one cast)")
+        if addon.crossRoot then
+            if not heading.back then
+                heading.back = CreateFrame("Button", nil, heading, "SecureActionButtonTemplate,UIPanelButtonTemplate")
+                heading.back:SetWidth(96); heading.back:SetHeight(20)
+                heading.back:SetPoint("RIGHT", heading, "RIGHT", 0, 0)
+                heading.back:RegisterForClicks("LeftButtonUp")
+                heading.back:SetScript("PreClick", function(self)
+                    if InCombatLockdown() then return end
+                    local macro = addon.ReturnProfessionMacro()
+                    self:SetAttribute("type", macro and "macro" or nil)
+                    self:SetAttribute("macrotext", macro)
+                end)
+            end
+            heading.back:SetText("Back to recipe")
+            local backMacro = addon.ReturnProfessionMacro()
+            heading.back:SetAttribute("type", backMacro and "macro" or nil)
+            heading.back:SetAttribute("macrotext", backMacro)
+            if backMacro then heading.back:Enable() else heading.back:Disable() end
+            heading.back:Show()
+        elseif heading.back then heading.back:Hide() end
         for _, node in ipairs(tree) do
             Row(node.needed .. "x ", node.item, node.recipe and "recipe" or nil, nil, node)
             if node.item and addon.herbs[node.item] then

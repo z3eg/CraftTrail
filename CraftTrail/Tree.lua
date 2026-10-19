@@ -6,6 +6,7 @@ local professions = {
     [755] = {25229, "Jewelcrafting"}, [773] = {45357, "Inscription"}
 }
 addon.recipeChoices = {}
+function addon.ProfessionSpell(skill) return professions[skill] and professions[skill][1] end
 
 function addon.ProfessionName(skill)
     local profession = professions[skill]
@@ -57,7 +58,7 @@ function addon.CycleRecipe(item)
 end
 
 function addon.BuildDependencyTree(index)
-    local rootRecipe = addon.ReadRecipe(index)
+    local rootRecipe = addon.crossRoot and addon.crossRoot.recipe or addon.ReadRecipe(index)
     if not rootRecipe then return {} end
     local rows, bags, surplus, path = {}, {}, {}, {}
     local function Add(item, needed, depth, forced, isRoot)

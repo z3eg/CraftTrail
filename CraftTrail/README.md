@@ -1,6 +1,13 @@
 # CraftTrail
 
-## Version 2.1.1: CraftTrail identity
+## Version 2.2.0: cross-profession crafting
+
+Click Craft on a component from another learned profession to open that
+profession and attempt one cast after checking its live recipe list. The
+original dependency tree stays visible, with a Back to recipe button. Slow
+client loading may require another click. No delayed automatic crafts run.
+
+## Version 2.1.0: CraftTrail identity
 
 The add-on is now **CraftTrail**, including its folder, TOC, UI objects and
 saved-variable name. Remove the old InkTrail add-on folder before installing.
@@ -20,6 +27,7 @@ allocated bag quantities, conservative batch counts/yield ranges, and a Craft
 button when a recipe exists. Arrows cycle alternate methods. Shared bag stock
 and planned surplus are counted once. Existing supplies stop expansion; cycles,
 eight-level depth and a 160-node cap prevent runaway trees. Materials from other
+professions can switch and craft when learned by this character; missing
 professions remain references with an explicit disabled reason. Gathering-only
 professions produce raw material leaves, not fictional craft buttons.
 

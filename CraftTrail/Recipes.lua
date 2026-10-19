@@ -215,7 +215,14 @@ function addon.NativeCraftState(spell, item)
     if not recipe then
         for _, candidate in ipairs((addon.componentRecipes or {})[item] or {}) do
             if candidate.spell == spell and addon.OpenProfession and candidate.skill ~= addon.OpenProfession() then
-                return false, "Open " .. addon.ProfessionName(candidate.skill) .. " to craft this component."
+                local professionSpell = addon.ProfessionSpell(candidate.skill)
+                if not professionSpell or not addon.KnowsSpell(professionSpell) then
+                    return false, "This character has not learned " .. addon.ProfessionName(candidate.skill) .. "."
+                end
+                for _, reagent in ipairs(candidate.reagents) do
+                    if GetItemCount(reagent[1], false) < reagent[2] then return false, "Not enough materials in bags." end
+                end
+                return true, "Switch to " .. addon.ProfessionName(candidate.skill) .. "; verify the learned recipe and craft one cast."
             end
         end
         return false, "Recipe not learned in the open profession."
@@ -262,3 +269,54 @@ end
 
 -- Called only by the secure action button's /run macro on a user click.
 CraftTrail_Craft = function(spell, item) return addon.NativeCraft(spell ~= 0 and spell or nil, item ~= 0 and item or nil) end
+
+-- The profession switch and craft attempt stay inside the SAME hardware macro.
+-- Events/timers never execute a pending craft. Slow client loads require a fresh click.
+local crossRequest
+function addon.CrossCraftMacro(spell, item)
+    for _, candidate in ipairs((addon.componentRecipes or {})[item] or {}) do
+        if candidate.spell == spell and candidate.skill ~= addon.OpenProfession() then
+            local name = addon.ProfessionName(candidate.skill)
+            return "/run CraftTrail_PrepareCross(" .. spell .. "," .. item .. "," .. candidate.skill .. ")\n/cast [nocombat] " ..
+                name .. "\n/run CraftTrail_FinishCross()"
+        end
+    end
+end
+CraftTrail_PrepareCross = function(spell, item, skill)
+    crossRequest = nil
+    local ready = addon.NativeCraftState(spell, item)
+    if not ready then return end
+    if not addon.crossRoot then
+        local recipe = addon.ReadRecipe(GetTradeSkillSelectionIndex())
+        if recipe then addon.crossRoot = {recipe = recipe, skill = addon.OpenProfession()} end
+    end
+    crossRequest = {spell = spell, item = item, skill = skill}
+end
+CraftTrail_FinishCross = function()
+    local request = crossRequest
+    crossRequest = nil
+    if not request or ActivityReason() then return false end
+    addon.recipeCatalog = nil
+    if addon.OpenProfession() ~= request.skill or GetNumTradeSkills() == 0 then
+        print("CraftTrail: Profession is still loading; click Craft again when it opens.")
+        return false
+    end
+    -- Never use static data as proof of recipe knowledge after switching.
+    local catalog = addon.RecipeCatalog(true)
+    if not catalog.bySpell[request.spell] then
+        print("CraftTrail: Recipe not learned in this profession (or still loading).")
+        return false
+    end
+    return addon.NativeCraft(request.spell, request.item)
+end
+function addon.ReturnProfessionMacro()
+    if ActivityReason() or not addon.crossRoot then return end
+    return "/cast [nocombat] " .. addon.ProfessionName(addon.crossRoot.skill) .. "\n/run CraftTrail_ReturnToRecipe()"
+end
+CraftTrail_ReturnToRecipe = function()
+    if ActivityReason() or not addon.crossRoot or addon.OpenProfession() ~= addon.crossRoot.skill then return end
+    local recipe = addon.crossRoot.recipe
+    restoreSelection = {spell=recipe.spell, item=recipe.item, name=recipe.name, line=GetTradeSkillLine()}
+    addon.crossRoot = nil
+    addon.recipeCatalog = nil
+end
