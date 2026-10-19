@@ -132,7 +132,8 @@ local function ResizeDetails()
     if InCombatLockdown() or not panel or not panel:IsShown() then return end
     local child = TradeSkillDetailScrollChildFrame
     if panelOffset then
-        child:SetHeight(math.max(originalHeight, panelOffset + panel:GetHeight() + 12))
+        local view = addon.crossRoot and addon.crossRoot.view
+        child:SetHeight(math.max(originalHeight, view and view.childHeight or 0, panelOffset + panel:GetHeight() + 12))
         TradeSkillDetailScrollFrame:UpdateScrollChildRect()
     end
 end
@@ -158,46 +159,55 @@ function addon.ClipRows()
     end
 end
 
-local function Clear()
+local function Clear(preserveHeight)
     if InCombatLockdown() or not panel then return end
     if GameTooltip:GetOwner() and GameTooltip:GetOwner():GetParent() == panel then GameTooltip:Hide() end
     for _, widget in pairs(widgets) do widget.used = false; widget:Hide() end
     panel:Hide()
-    TradeSkillDetailScrollChildFrame:SetHeight(originalHeight)
-    TradeSkillDetailScrollFrame:UpdateScrollChildRect()
+    if not preserveHeight then
+        TradeSkillDetailScrollChildFrame:SetHeight(originalHeight)
+        TradeSkillDetailScrollFrame:UpdateScrollChildRect()
+    end
 end
 
 function addon.Refresh()
     if InCombatLockdown() or not panel then return false end
-    Clear()
-    if not TradeSkillFrame:IsShown() then addon.HideDescription(); addon.ResetWindow(); return false end
+    Clear(true) -- Shrinking the scroll child here resets its scroll position.
+    if not TradeSkillFrame:IsShown() then Clear(); addon.HideDescription(); addon.ResetWindow(); return false end
     addon.UpdateWindow()
     addon.UpdateRecipeList()
     local inscription = GetSpellInfo(45357)
     local isInscription = inscription and GetTradeSkillLine() == inscription
     if not isInscription and not (addon.IsSupportedProfession and addon.IsSupportedProfession()) then
+        Clear()
         addon.RestoreDescription(GetTradeSkillSelectionIndex())
         return false
     end
     local index = GetTradeSkillSelectionIndex()
-    if GetNumTradeSkills() == 0 then return true end
     local pinned = addon.crossRoot and addon.crossRoot.view
+    if GetNumTradeSkills() == 0 and not pinned then Clear(); return true end
+    if not pinned then
+        addon.displayedRoot = addon.ReadRecipe and addon.ReadRecipe(index)
+        addon.displayedSkill = addon.OpenProfession and addon.OpenProfession()
+        addon.displayedListOffset = FauxScrollFrame_GetOffset(TradeSkillListScrollFrame)
+    end
     local descriptionMissing = not pinned and isInscription and addon.UpdateDescription(index) or false
     if pinned then addon.HideDescription()
     elseif not isInscription then addon.RestoreDescription(index) end
     local tree = addon.BuildDependencyTree and addon.BuildDependencyTree(index)
     local groups = not tree and addon.BuildGroups(index) or {}
-    if (tree and #tree == 0) or (not tree and #groups == 0) then return descriptionMissing end
+    if (tree and #tree == 0) or (not tree and #groups == 0) then Clear(); return descriptionMissing end
 
     local lowest = TradeSkillReagentLabel:GetBottom()
-    for reagent = 1, GetTradeSkillNumReagents(index) do
+    for reagent = 1, (not pinned and GetTradeSkillNumReagents(index) or 0) do
         local button = _G["TradeSkillReagent" .. reagent]
         local bottom = button and button:IsShown() and button:GetBottom()
         if bottom and (not lowest or bottom < lowest) then lowest = bottom end
     end
     local child = TradeSkillDetailScrollChildFrame
     panelOffset = math.max(0, (child:GetTop() or 0) - (lowest or child:GetTop() or 0)) + 12
-    if pinned then panelOffset = 76 end
+    if pinned then panelOffset = pinned.panelOffset or 76
+    else addon.displayedPanelOffset = panelOffset end
     panel:ClearAllPoints()
     panel:SetPoint("TOPLEFT", child, "TOPLEFT", 5, -panelOffset)
     panel:Show()
@@ -373,7 +383,7 @@ function addon.Refresh()
     ResizeDetails()
     addon.ClipRows()
     if addon.ApplyProfessionView then addon.ApplyProfessionView() end
-    return missing or (addon.recipeCatalog and addon.recipeCatalog.incomplete)
+    return missing or (addon.recipeCatalog and addon.recipeCatalog.incomplete) or (pinned and GetNumTradeSkills() == 0)
 end
 
 local function Tick(self, elapsed)
@@ -414,11 +424,30 @@ local function Attach()
     hooksecurefunc("TradeSkillFrame_Update", NativeUpdated)
     TradeSkillDetailScrollFrame:HookScript("OnVerticalScroll", addon.ClipRows)
     TradeSkillDetailScrollFrame:HookScript("OnScrollRangeChanged", addon.ClipRows)
+    if addon.SavePinnedScroll then
+        TradeSkillDetailScrollFrame:HookScript("OnMouseWheel", addon.SavePinnedScroll)
+        if TradeSkillDetailScrollFrameScrollBar then
+            TradeSkillDetailScrollFrameScrollBar:HookScript("OnValueChanged", function(self, value, userInput)
+                if userInput then addon.SavePinnedScroll() end
+            end)
+        end
+    end
     TradeSkillFrame:HookScript("OnShow", NativeUpdated)
     TradeSkillFrame:HookScript("OnHide", function()
-        if not addon.crossSwitch then
-            addon.crossRoot = nil
-            if addon.ReleaseProfessionView then addon.ReleaseProfessionView() end
+        if addon.crossRoot then
+            -- Profession switches can deliver OnHide AFTER the click macro has
+            -- finished. A following OnShow cancels this cleanup via Schedule.
+            local hiddenFor = 0
+            driver:SetScript("OnUpdate", function(self, elapsed)
+                if TradeSkillFrame:IsShown() then Schedule(); return end
+                hiddenFor = hiddenFor + elapsed
+                if hiddenFor < 0.5 or addon.crossSwitch then return end
+                self:SetScript("OnUpdate", nil)
+                addon.crossRoot = nil
+                if addon.ReleaseProfessionView then addon.ReleaseProfessionView() end
+                Clear(); addon.HideDescription(); addon.ResetWindow()
+            end)
+            return
         end
         driver:SetScript("OnUpdate", nil)
         Clear()

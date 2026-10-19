@@ -346,7 +346,7 @@ Check(#casts==before+1 and casts[#casts]==2657 and addon.OpenProfession()==186, 
 Check(addon.BuildDependencyTree(selection)[1].item==4371, 'original Engineering tree lost while smelting')
 addon.Refresh()
 Check(CraftTrailPinnedRecipes:IsShown() and CraftTrailPinnedRecipe:IsShown(), 'original profession view missing')
-Check(TradeSkillFrameTitleText:GetText()=='Engineering' and CraftTrailPinnedRecipe.text:GetText()==tube.name,
+Check(TradeSkillFrameTitleText:GetText()=='Engineering' and string.find(CraftTrailPinnedRecipe.text:GetText(),tube.name,1,true)==1,
  'destination profession replaced the visible title/recipe')
 Check(not TradeSkillSkill1:IsShown() and not TradeSkillCreateButton:IsShown(), 'destination native controls still clickable')
 -- Simulate a native destination repaint, including re-showing its native rows.
@@ -383,11 +383,53 @@ Check(#casts==before, 'cross craft ran before destination profession loaded')
 TestSwitchProfession=nil; addon.crossRoot=nil
 addon.KnowsSpell=function() return false end; addon.recipeCatalog=nil
 Check(not addon.NativeCraftState(2657,2840), 'unknown profession enabled cross craft')
+-- Start from a non-first recipe, then let native selection reset before the
+-- cross macro. Keep the RENDERED recipe, geometry and a nonzero scroll position.
+addon.KnowsSpell=function(id) return id==2656 or id==4036 end
+addon.crossRoot=nil; addon.ReleaseProfessionView()
+Setup({originRecipes[2],tube},'Engineering',oreBags); SelectTradeSkill(2)
+addon.recipeCatalog=nil; addon.Refresh()
+local _,_,_,_,originalY=CraftTrailDetails:GetPoint()
+TradeSkillDetailScrollChildFrame:SetHeight(800)
+TradeSkillDetailScrollFrame:SetVerticalScroll(120)
+addon.ConfigureAction(crossButton,{})
+SelectTradeSkill(1)
+TestSwitchProfession=function(name) Setup({copper,tin,bronze},name,oreBags) end
+Click(crossButton)
+Check(addon.crossRoot.recipe.item==4371, 'native reset replaced the rendered original recipe')
+-- A delayed hide arriving after FinishCross must not drop the context.
+TradeSkillFrame:Hide(); TradeSkillFrame.scripts.OnHide(TradeSkillFrame)
+for _,frame in ipairs(frames) do
+ if frame.events.TRADE_SKILL_SHOW and frame.scripts.OnUpdate then frame.scripts.OnUpdate(frame,0.1) end
+end
+Check(addon.crossRoot and addon.crossRoot.recipe.item==4371, 'deferred hide discarded the recipe')
+TradeSkillDetailScrollFrame:SetVerticalScroll(0)
+TradeSkillFrame:Show(); TradeSkillFrame.scripts.OnShow(TradeSkillFrame)
+local originalSetHeight=TradeSkillDetailScrollChildFrame.SetHeight
+local shrank=false
+TradeSkillDetailScrollChildFrame.SetHeight=function(self,height)
+ if height<800 then shrank=true end
+ return originalSetHeight(self,height)
+end
+addon.Refresh()
+local _,_,_,_,pinnedY=CraftTrailDetails:GetPoint()
+Check(pinnedY==originalY and not shrank and TradeSkillDetailScrollFrame:GetVerticalScroll()==120,
+ 'cross-profession repaint moved the tree or reset its scroll extent/position')
+Check(CraftTrailPinnedRecipes.rows[2].highlight, 'original recipe highlight lost')
+-- Keep the view during the temporary empty list emitted while switching.
+Setup({},'Smelting',oreBags); addon.recipeCatalog=nil; addon.Refresh()
+Check(CraftTrailDetails:IsShown() and addon.crossRoot.recipe.item==4371,
+ 'temporary empty destination list cleared the original tree')
+TradeSkillDetailScrollChildFrame.SetHeight=originalSetHeight
 addon.KnowsSpell=knows
 addon.crossRoot={recipe=tube,skill=202}; Setup(originRecipes,'Engineering',oreBags)
 addon.CaptureProfessionView(); addon.ApplyProfessionView()
 TradeSkillFrame.scripts.OnHide(TradeSkillFrame)
-Check(not addon.crossRoot and not CraftTrailPinnedRecipes:IsShown() and TradeSkillCreateButton:IsShown(),
+TradeSkillFrame:Hide()
+for _,frame in ipairs(frames) do
+ if frame.events.TRADE_SKILL_SHOW and frame.scripts.OnUpdate then frame.scripts.OnUpdate(frame,0.6) end
+end
+Check(not addon.crossRoot and not CraftTrailPinnedRecipes:IsShown() and TradeSkillCreateButton.shown,
  'closing the window left a stale pinned view or hidden native controls')
 print('Engineering-to-Smelting macro, original tree/return, unlearned and delayed-load checks passed.')
 ''')

@@ -11,13 +11,23 @@ function addon.CaptureProfessionView()
     local root = addon.crossRoot
     if not root or root.view then return end
     local name, rank, maximum = GetTradeSkillLine()
-    root.view = {name=name, rank=rank, maximum=maximum, entries={}, offset=0}
+    root.view = {name=name, rank=rank, maximum=maximum, entries={}, offset=0,
+        childHeight=TradeSkillDetailScrollChildFrame:GetHeight(),
+        detailScroll=TradeSkillDetailScrollFrame:GetVerticalScroll(),
+        panelOffset=addon.displayedSkill==root.skill and addon.displayedPanelOffset or 76}
     for index=1,GetNumTradeSkills() do
         local text, kind = GetTradeSkillInfo(index)
         local recipe = kind ~= "header" and addon.ReadRecipe(index)
         root.view.entries[#root.view.entries+1] = {text=text, header=kind=="header", recipe=recipe}
     end
-    if FauxScrollFrame_GetOffset then root.view.offset = FauxScrollFrame_GetOffset(TradeSkillListScrollFrame) end
+    if FauxScrollFrame_GetOffset then
+        root.view.offset = addon.displayedSkill==root.skill and addon.displayedListOffset or FauxScrollFrame_GetOffset(TradeSkillListScrollFrame)
+    end
+end
+
+function addon.SavePinnedScroll()
+    local view=addon.crossRoot and addon.crossRoot.view
+    if view and not view.restoringScroll then view.detailScroll=TradeSkillDetailScrollFrame:GetVerticalScroll() end
 end
 
 function addon.ReleaseProfessionView()
@@ -48,7 +58,11 @@ function addon.ApplyProfessionView()
         end)
         list.rows={}
         for n=1,TRADE_SKILLS_DISPLAYED do
-            local row=CreateFrame("Button",nil,list,"SecureActionButtonTemplate,UIPanelButtonTemplate")
+            local row=CreateFrame("Button",nil,list,"SecureActionButtonTemplate")
+            local text=row:CreateFontString(nil,"OVERLAY","GameFontHighlight")
+            text:SetPoint("LEFT",row,"LEFT",2,0); text:SetWidth(319); text:SetJustifyH("LEFT")
+            row:SetFontString(text)
+            row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
             row:SetPoint("TOPLEFT",list,"TOPLEFT",0,-(n-1)*TRADE_SKILL_HEIGHT)
             row:SetWidth(323); row:SetHeight(TRADE_SKILL_HEIGHT)
             row:RegisterForClicks("LeftButtonUp")
@@ -98,6 +112,9 @@ function addon.ApplyProfessionView()
         local entry=view.entries[view.offset+n]
         if entry then
             row:SetText(entry.text)
+            local selected=entry.recipe and ((root.recipe.spell and entry.recipe.spell==root.recipe.spell) or
+                (not root.recipe.spell and entry.recipe.item==root.recipe.item))
+            if selected then row:LockHighlight() else row:UnlockHighlight() end
             row:SetAttribute("type",entry.recipe and "macro" or nil)
             row.originMacro=entry.recipe and ("/cast [nocombat] "..addon.ProfessionName(root.skill)..
                 "\n/run CraftTrail_SelectOrigin("..(entry.recipe.spell or 0)..","..(entry.recipe.item or 0)..")") or nil
@@ -106,10 +123,27 @@ function addon.ApplyProfessionView()
             row:Show()
         else row:Hide() end
     end
-    summary.text:SetText(root.recipe.name)
+    local text=root.recipe.name
+    local tools={}
+    local requiredTools=root.recipe.tools or {}
+    for n=1,#requiredTools,2 do tools[#tools+1]=requiredTools[n] end
+    if #tools>0 then text=text.."\nRequires: "..table.concat(tools,", ") end
+    text=text.."\n\nReagents:"
+    for _,reagent in ipairs(root.recipe.reagents) do
+        text=text.."\n"..reagent[2].."x "..(GetItemInfo(reagent[1]) or (addon.componentNames or {})[reagent[1]] or ("item "..reagent[1]))
+    end
+    summary.text:SetText(text)
+    summary:SetHeight(math.max(64,(view.panelOffset or 76)-12))
     local icon = root.recipe.item and select(10,GetItemInfo(root.recipe.item))
     summary.icon:SetTexture(icon or "Interface\\Icons\\INV_Misc_QuestionMark")
     list:Show(); summary:Show()
+    -- Native selection/filter events reset this scroll frame during switching.
+    -- Preserve the original extent before restoring its scroll offset.
+    TradeSkillDetailScrollChildFrame:SetHeight(math.max(view.childHeight,TradeSkillDetailScrollChildFrame:GetHeight()))
+    TradeSkillDetailScrollFrame:UpdateScrollChildRect()
+    view.restoringScroll=true
+    TradeSkillDetailScrollFrame:SetVerticalScroll(view.detailScroll or 0)
+    view.restoringScroll=nil
 end
 
 CraftTrail_SelectOrigin=function(spell,item)

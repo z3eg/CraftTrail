@@ -31,6 +31,8 @@ function Frame:SetBackdrop() end
 function Frame:SetBackdropColor() end
 function Frame:EnableMouse() end
 function Frame:EnableMouseWheel() end
+function Frame:GetVerticalScroll() return self.verticalScroll or 0 end
+function Frame:SetVerticalScroll(value) self.verticalScroll=value end
 function Frame:RegisterForDrag() end
 function Frame:SetMovable(value) self.movable = value end
 function Frame:SetClampedToScreen() end

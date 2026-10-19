@@ -284,11 +284,14 @@ function addon.CrossCraftMacro(spell, item)
 end
 CraftTrail_PrepareCross = function(spell, item, skill)
     crossRequest = nil
+    -- Use the recipe that was rendered, before catalog/filter updates can reset
+    -- the native selection to the first recipe in the underlying profession.
+    local originSkill = addon.OpenProfession()
+    local originRecipe = addon.displayedSkill == originSkill and addon.displayedRoot or addon.ReadRecipe(GetTradeSkillSelectionIndex())
     local ready = addon.NativeCraftState(spell, item)
     if not ready then return end
     if not addon.crossRoot then
-        local recipe = addon.ReadRecipe(GetTradeSkillSelectionIndex())
-        if recipe then addon.crossRoot = {recipe = recipe, skill = addon.OpenProfession()} end
+        if originRecipe then addon.crossRoot = {recipe = originRecipe, skill = originSkill} end
     end
     if addon.CaptureProfessionView then addon.CaptureProfessionView(); addon.ApplyProfessionView() end
     addon.crossSwitch = true

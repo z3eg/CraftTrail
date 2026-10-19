@@ -1,5 +1,14 @@
 # CraftTrail
 
+## Version 2.3.1: stable cross-profession recipe and scroll position
+
+The original rendered recipe is captured before native selection resets. The
+pinned tree retains its original anchor and detail scroll extent; refreshes no
+longer briefly shrink the scroll area. Deferred hide/show events and temporary
+empty destination lists keep the original context. The snapshot list uses plain
+native-style rows and highlights the original recipe. Offline regressions cover
+non-first recipes, nonzero scrolling and delayed window events.
+
 ## Version 2.3.0: keep the original profession visible
 
 Cross-profession crafting now preserves the original title/rank, recipe summary,
