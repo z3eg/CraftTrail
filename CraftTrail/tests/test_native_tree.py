@@ -276,4 +276,38 @@ for n=1,3 do
 end
 SetTradeSkillItemNameFilter=originalNameFilter
 print('Repeated catalog/craft category expansion preservation passed.')
+-- Smelting can have no subclass/slot options and no checked "All" flag.
+-- Disabling All on restore must not turn that unfiltered state into an empty list.
+editText=''
+local copper=Recipe(2657,2840,{{2770,1}})
+local tin=Recipe(3304,3576,{{2771,1}})
+local bronze=Recipe(2659,2841,{{2840,1},{3576,1}})
+Setup({copper,tin,bronze},'Smelting',{{id=2770,count=4},{id=2771,count=4}})
+GetTradeSkillSubClasses=function() end
+GetTradeSkillInvSlots=function() end
+GetTradeSkillSubClassFilter=function() return nil end
+GetTradeSkillInvSlotFilter=function() return nil end
+local subSetter,slotSetter=SetTradeSkillSubClassFilter,SetTradeSkillInvSlotFilter
+SetTradeSkillSubClassFilter=function(i,enabled,exclusive)
+ if i==0 and enabled==0 then subFilter=-1; SetTradeSkillItemNameFilter(searchText)
+ else subSetter(i,enabled,exclusive) end
+end
+SetTradeSkillInvSlotFilter=function(i,enabled,exclusive)
+ if i==0 and enabled==0 then slotFilter=-1; SetTradeSkillItemNameFilter(searchText)
+ else slotSetter(i,enabled,exclusive) end
+end
+for _,profession in ipairs({'Smelting','Mining'}) do
+ line=profession; addon.recipeCatalog=nil
+ addon.Refresh()
+ Check(GetNumTradeSkills()==3, 'smelting catalog restoration emptied the native recipe list')
+ Check(addon.RecipeCatalog().bySpell[2657] and addon.RecipeCatalog().bySpell[3304], 'smelting recipes absent')
+ Check(addon.NativeCraft(2657,2840), 'known copper smelting did not craft')
+ Check(GetNumTradeSkills()==3, 'smelting craft hid recipes')
+end
+-- Some clients expose an option but still report no checked filter.
+GetTradeSkillSubClasses=function() return 'Metal' end
+GetTradeSkillInvSlots=function() return 'Other' end
+addon.RecipeCatalog(true)
+Check(GetNumTradeSkills()==3, 'unchecked filter options emptied smelting list')
+print('Uncategorized Smelting/Mining recipe lists and native crafting passed.')
 ''')

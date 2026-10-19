@@ -113,8 +113,20 @@ function addon.WithAllRecipes(callback)
             _G["SetTradeSkill" .. group[1] .. "Filter"], _G[group[2]]
         if get and set and list then
             local saved = {get = get, set = set, all = Flag(get(0)), enabled = {}}
-            for n = 1, select("#", list()) do saved.enabled[n] = Flag(get(n)) end
-            filters[#filters + 1] = saved
+            local hasOptions, hasSelection = false, false
+            for n, name in ipairs({list()}) do
+                if name then
+                    hasOptions = true
+                    saved.enabled[n] = Flag(get(n))
+                    hasSelection = hasSelection or saved.enabled[n]
+                end
+            end
+            -- Smelting may expose neither options nor a checked All flag.
+            -- Restoring that as SetFilter(0, 0, 1) excludes every recipe.
+            if hasOptions then
+                saved.all = saved.all or not hasSelection
+                filters[#filters + 1] = saved
+            end
         end
     end
     for _, saved in ipairs(filters) do saved.set(0, 1, 1) end

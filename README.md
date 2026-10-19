@@ -3,7 +3,7 @@
 Recipe material trails for World of Warcraft **Wrath of the Lich King 3.3.5a**
 (interface 30300).
 
-**CraftTrail 2.1.0** displays the selected recipe as a connected material tree,
+**CraftTrail 2.1.1** displays the selected recipe as a connected material tree,
 with native item links, required/allocated bag counts, per-node Craft buttons,
 disabled reasons, batch yields and alternate recipes. It uses the native
 profession Create action rather than trying to cast profession recipes by name.
@@ -22,6 +22,9 @@ Engineering has an [interactive design preview](docs/engineering-preview.html)
 and the [original dependency-tree design](docs/engineering-design.md). The actual
 tree now runs in-game for every supported recipe profession. The separate browser
 preview remains a simulation, not a game client.
+
+Version 2.1.1 fixes empty Smelting recipe lists caused by restoring absent or
+unchecked category/slot filters as an exclusion of all recipes.
 
 ## Install
 
@@ -62,7 +65,7 @@ Build the installable package and separate Engineering browser sketch with:
 python tools/package.py
 ```
 
-The output is `dist/CraftTrail-2.1.0.zip`. Copy only its CraftTrail folder
+The output is `dist/CraftTrail-2.1.1.zip`. Copy only its CraftTrail folder
 into AddOns; open `Engineering-preview.html` in a browser. The preview is not an
 in-game module; the actual dependency tree is included in the CraftTrail folder.
 

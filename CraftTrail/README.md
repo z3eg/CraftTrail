@@ -1,6 +1,6 @@
 # CraftTrail
 
-## Version 2.1.0: CraftTrail identity
+## Version 2.1.1: CraftTrail identity
 
 The add-on is now **CraftTrail**, including its folder, TOC, UI objects and
 saved-variable name. Remove the old InkTrail add-on folder before installing.
