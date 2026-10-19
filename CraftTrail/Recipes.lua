@@ -290,9 +290,12 @@ CraftTrail_PrepareCross = function(spell, item, skill)
         local recipe = addon.ReadRecipe(GetTradeSkillSelectionIndex())
         if recipe then addon.crossRoot = {recipe = recipe, skill = addon.OpenProfession()} end
     end
+    if addon.CaptureProfessionView then addon.CaptureProfessionView(); addon.ApplyProfessionView() end
+    addon.crossSwitch = true
     crossRequest = {spell = spell, item = item, skill = skill}
 end
 CraftTrail_FinishCross = function()
+    addon.crossSwitch = nil
     local request = crossRequest
     crossRequest = nil
     if not request or ActivityReason() then return false end
@@ -318,5 +321,7 @@ CraftTrail_ReturnToRecipe = function()
     local recipe = addon.crossRoot.recipe
     restoreSelection = {spell=recipe.spell, item=recipe.item, name=recipe.name, line=GetTradeSkillLine()}
     addon.crossRoot = nil
+    if addon.ReleaseProfessionView then addon.ReleaseProfessionView() end
     addon.recipeCatalog = nil
+    if TradeSkillFrame_Update then TradeSkillFrame_Update() end
 end

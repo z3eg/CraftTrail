@@ -1,5 +1,14 @@
 # CraftTrail
 
+## Version 2.3.0: keep the original profession visible
+
+Cross-profession crafting now preserves the original title/rank, recipe summary,
+visible recipe list and dependency tree while the client switches internally.
+The list snapshot supports mouse-wheel scrolling and selection back into the
+original profession. Destination controls are hidden; use tree Craft buttons.
+Back to recipe restores the native controls. This UI behavior has offline test
+coverage; its appearance still requires a real 3.3.5a client check.
+
 ## Version 2.2.0: cross-profession crafting
 
 Click Craft on a component from another learned profession to open that

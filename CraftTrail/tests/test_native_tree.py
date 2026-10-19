@@ -22,6 +22,7 @@ GetSpellInfo = function(id) return names[id] or ('Recipe' .. id), nil, 'icon' en
 IsSpellKnown = function() return 0 end
 GetSpellCooldown = function() return 0,0,0 end
 allRecipes, casts = {}, {}
+TRADE_SKILL_HEIGHT=16
 subFilter, slotFilter, searchText, makeable = 1, 0, '', false
 local function Rebuild()
  recipes = {}
@@ -319,15 +320,21 @@ print('Uncategorized Smelting/Mining recipe lists and native crafting passed.')
 -- Execute the actual secure macro in order: capture root, switch profession,
 -- resolve the learned target in its live catalog, then one DoTradeSkill.
 local tube=Recipe(3938,4371,{{2840,2}})
+local originRecipes={tube}
+for n=1,12 do originRecipes[#originRecipes+1]=Recipe(990000+n,991000+n,{}) end
+TradeSkillFrameTitleText=CreateFrame('Font',nil,TradeSkillFrame)
 local oreBags={{id=2770,count=2}}
 local knows=addon.KnowsSpell
 addon.KnowsSpell=function(id) return id==2656 or id==4036 end
 TestSwitchProfession=function(name)
- if name=='Smelting' then Setup({copper,tin,bronze},name,oreBags)
- elseif name=='Engineering' then Setup({tube},name,oreBags)
+ if name=='Smelting' then
+  TradeSkillFrame.scripts.OnHide(TradeSkillFrame)
+  Setup({copper,tin,bronze},name,oreBags)
+  TradeSkillFrame.scripts.OnShow(TradeSkillFrame)
+ elseif name=='Engineering' then Setup(originRecipes,name,oreBags)
  else error('unexpected profession '..name) end
 end
-Setup({tube},'Engineering',oreBags); addon.recipeCatalog=nil; editText=''
+Setup(originRecipes,'Engineering',oreBags); addon.recipeCatalog=nil; editText=''
 local crossRow=CreateFrame('Button','CrossProfessionRow',TradeSkillFrame)
 local crossButton=addon.CreateAction(crossRow)
 crossButton.kind='recipe'; crossButton.itemID=2840; crossButton.recipeSpell=2657
@@ -338,6 +345,19 @@ before=#casts; Click(crossButton)
 Check(#casts==before+1 and casts[#casts]==2657 and addon.OpenProfession()==186, 'cross-profession macro crafted wrong recipe')
 Check(addon.BuildDependencyTree(selection)[1].item==4371, 'original Engineering tree lost while smelting')
 addon.Refresh()
+Check(CraftTrailPinnedRecipes:IsShown() and CraftTrailPinnedRecipe:IsShown(), 'original profession view missing')
+Check(TradeSkillFrameTitleText:GetText()=='Engineering' and CraftTrailPinnedRecipe.text:GetText()==tube.name,
+ 'destination profession replaced the visible title/recipe')
+Check(not TradeSkillSkill1:IsShown() and not TradeSkillCreateButton:IsShown(), 'destination native controls still clickable')
+-- Simulate a native destination repaint, including re-showing its native rows.
+TradeSkillFrameTitleText:SetText('Smelting'); TradeSkillSkill1:Show(); TradeSkillCreateButton:Show()
+hooks.TradeSkillFrame_Update()
+Check(TradeSkillFrameTitleText:GetText()=='Engineering' and not TradeSkillSkill1:IsShown() and not TradeSkillCreateButton:IsShown(),
+ 'native repaint leaked destination controls')
+CraftTrailPinnedRecipes.scripts.OnMouseWheel(CraftTrailPinnedRecipes,-100)
+Check(addon.crossRoot.view.offset==5 and CraftTrailPinnedRecipes.rows[8]:GetText()==originRecipes[13].name,
+ 'original recipe list cannot scroll past first page')
+CraftTrailPinnedRecipes.scripts.OnMouseWheel(CraftTrailPinnedRecipes,100)
 local foundBack=false
 for _,frame in ipairs(frames) do
  if frame.attributes and frame.attributes.macrotext==addon.ReturnProfessionMacro() then foundBack=frame end
@@ -345,6 +365,11 @@ end
 Check(foundBack, 'return-to-original-recipe button missing')
 Click(foundBack); addon.RestoreRecipeSelection()
 Check(not addon.crossRoot and GetTradeSkillItemLink(selection)=='item:4371', 'original recipe not restored')
+Check(not CraftTrailPinnedRecipes:IsShown() and TradeSkillCreateButton:IsShown(), 'native controls not restored on return')
+addon.recipeCatalog=nil; addon.ConfigureAction(crossButton,{}); Click(crossButton)
+before=#casts; Click(CraftTrailPinnedRecipes.rows[2]); addon.RestoreRecipeSelection()
+Check(not addon.crossRoot and GetTradeSkillItemLink(selection)=='item:991001' and #casts==before,
+ 'selecting an original recipe used a destination index or crafted automatically')
 -- An absent target recipe is never crafted based on the static dependency data.
 TestSwitchProfession=function(name) Setup({tin},name,oreBags) end
 addon.recipeCatalog=nil; addon.ConfigureAction(crossButton,{})
@@ -359,5 +384,10 @@ TestSwitchProfession=nil; addon.crossRoot=nil
 addon.KnowsSpell=function() return false end; addon.recipeCatalog=nil
 Check(not addon.NativeCraftState(2657,2840), 'unknown profession enabled cross craft')
 addon.KnowsSpell=knows
+addon.crossRoot={recipe=tube,skill=202}; Setup(originRecipes,'Engineering',oreBags)
+addon.CaptureProfessionView(); addon.ApplyProfessionView()
+TradeSkillFrame.scripts.OnHide(TradeSkillFrame)
+Check(not addon.crossRoot and not CraftTrailPinnedRecipes:IsShown() and TradeSkillCreateButton:IsShown(),
+ 'closing the window left a stale pinned view or hidden native controls')
 print('Engineering-to-Smelting macro, original tree/return, unlearned and delayed-load checks passed.')
 ''')

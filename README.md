@@ -3,7 +3,7 @@
 Recipe material trails for World of Warcraft **Wrath of the Lich King 3.3.5a**
 (interface 30300).
 
-**CraftTrail 2.2.0** displays the selected recipe as a connected material tree,
+**CraftTrail 2.3.0** displays the selected recipe as a connected material tree,
 with native item links, required/allocated bag counts, per-node Craft buttons,
 disabled reasons, batch yields and alternate recipes. It uses the native
 profession Create action rather than trying to cast profession recipes by name.
@@ -57,8 +57,15 @@ open profession list, including hidden/collapsed recipes. Filters, headers and
 the selected top-level recipe are restored after lookup/crafting. Each click
 submits one `DoTradeSkill(index, 1)` call; it does not automate the whole chain.
 Missing bag materials, tools, cooldowns and busy states disable the action.
-Cross-profession Craft buttons now open the required profession and attempt one
-native craft in the same hardware click. The character must know the profession
+Cross-profession Craft buttons activate the required profession internally and
+attempt one native craft in the same hardware click. Version 2.3.0 keeps the
+original profession title/rank, recipe summary, dependency tree and a scrollable
+snapshot of its visible recipe list on screen. Destination-native recipe,
+filter and Create controls are hidden so their indices cannot be clicked by
+mistake. Use the tree's Craft buttons for components; Back to recipe restores
+the normal native interface. Clicking a recipe in the snapshot returns to its
+profession and selects that recipe without crafting it. Mouse-wheel scrolling
+browses the snapshot; use Back to recipe to change filters or collapsed groups. The character must know the profession
 and have materials; the destination's live learned recipe, tools and cooldown
 are verified after switching. The original dependency tree remains pinned;
 **Back to recipe** reopens its profession and restores its recipe selection.
@@ -72,7 +79,7 @@ Build the installable package and separate Engineering browser sketch with:
 python tools/package.py
 ```
 
-The output is `dist/CraftTrail-2.2.0.zip`. Copy only its CraftTrail folder
+The output is `dist/CraftTrail-2.3.0.zip`. Copy only its CraftTrail folder
 into AddOns; open `Engineering-preview.html` in a browser. The preview is not an
 in-game module; the actual dependency tree is included in the CraftTrail folder.
 

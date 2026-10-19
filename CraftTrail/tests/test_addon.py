@@ -30,6 +30,7 @@ function Frame:SetFrameLevel() end
 function Frame:SetBackdrop() end
 function Frame:SetBackdropColor() end
 function Frame:EnableMouse() end
+function Frame:EnableMouseWheel() end
 function Frame:RegisterForDrag() end
 function Frame:SetMovable(value) self.movable = value end
 function Frame:SetClampedToScreen() end

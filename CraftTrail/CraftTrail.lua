@@ -181,8 +181,10 @@ function addon.Refresh()
     end
     local index = GetTradeSkillSelectionIndex()
     if GetNumTradeSkills() == 0 then return true end
-    local descriptionMissing = isInscription and addon.UpdateDescription(index) or false
-    if not isInscription then addon.RestoreDescription(index) end
+    local pinned = addon.crossRoot and addon.crossRoot.view
+    local descriptionMissing = not pinned and isInscription and addon.UpdateDescription(index) or false
+    if pinned then addon.HideDescription()
+    elseif not isInscription then addon.RestoreDescription(index) end
     local tree = addon.BuildDependencyTree and addon.BuildDependencyTree(index)
     local groups = not tree and addon.BuildGroups(index) or {}
     if (tree and #tree == 0) or (not tree and #groups == 0) then return descriptionMissing end
@@ -195,6 +197,7 @@ function addon.Refresh()
     end
     local child = TradeSkillDetailScrollChildFrame
     panelOffset = math.max(0, (child:GetTop() or 0) - (lowest or child:GetTop() or 0)) + 12
+    if pinned then panelOffset = 76 end
     panel:ClearAllPoints()
     panel:SetPoint("TOPLEFT", child, "TOPLEFT", 5, -panelOffset)
     panel:Show()
@@ -369,6 +372,7 @@ function addon.Refresh()
     panel:SetHeight(position)
     ResizeDetails()
     addon.ClipRows()
+    if addon.ApplyProfessionView then addon.ApplyProfessionView() end
     return missing or (addon.recipeCatalog and addon.recipeCatalog.incomplete)
 end
 
@@ -402,12 +406,20 @@ local function Attach()
     panel:SetFrameLevel(TradeSkillDetailScrollChildFrame:GetFrameLevel() + 1)
     panel:SetWidth(289)
     panel:Hide()
-    hooksecurefunc("TradeSkillFrame_SetSelection", Schedule)
-    hooksecurefunc("TradeSkillFrame_Update", Schedule)
+    local function NativeUpdated()
+        if addon.ApplyProfessionView then addon.ApplyProfessionView() end
+        Schedule()
+    end
+    hooksecurefunc("TradeSkillFrame_SetSelection", NativeUpdated)
+    hooksecurefunc("TradeSkillFrame_Update", NativeUpdated)
     TradeSkillDetailScrollFrame:HookScript("OnVerticalScroll", addon.ClipRows)
     TradeSkillDetailScrollFrame:HookScript("OnScrollRangeChanged", addon.ClipRows)
-    TradeSkillFrame:HookScript("OnShow", Schedule)
+    TradeSkillFrame:HookScript("OnShow", NativeUpdated)
     TradeSkillFrame:HookScript("OnHide", function()
+        if not addon.crossSwitch then
+            addon.crossRoot = nil
+            if addon.ReleaseProfessionView then addon.ReleaseProfessionView() end
+        end
         driver:SetScript("OnUpdate", nil)
         Clear()
         addon.HideDescription()
