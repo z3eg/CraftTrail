@@ -207,6 +207,7 @@ SlashCmdList.INKTRAIL = function(message)
     if InCombatLockdown() then return end
     local settings = addon.WindowSettings()
     message = string.lower(string.match(message or "", "^%s*(.-)%s*$"))
+    if message == "all" then addon.ShowAllRecipes(); return end
     if message == "why" then addon.ExplainCraftAvailability(); return end
     if message == "version" then
         print("InkTrail version: " .. (GetAddOnMetadata(addonName, "Version") or "unknown"))

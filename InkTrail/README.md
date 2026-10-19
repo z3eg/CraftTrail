@@ -1,6 +1,6 @@
 # InkTrail
 
-## Version 2.0.0: native Craft and all-profession dependency trees
+## Version 2.0.2: native Craft and all-profession dependency trees
 
 The in-game title is now **CraftTrail (InkTrail)**; the folder, saved variables
 and old slash commands remain compatible. Replace the existing InkTrail folder
@@ -244,7 +244,7 @@ and attaches to the detail scroll child defined in its
 It uses secure post-hooks rather than replacing Blizzard functions. Crafting and
 milling occur only through user clicks on secure action buttons based on the legacy
 [secure templates](https://github.com/wowgaming/3.3.5-interface-files/blob/main/SecureTemplates.lua).
-Version 2.0.0 temporarily expands categories/clears filters for native lookup,
+Version 2.0.2 temporarily expands categories/clears filters for native lookup,
 then restores them. Earlier versions did not perform this lookup.
 
 `Data.lua` contains factual IDs, names and ink/milling relationships generated

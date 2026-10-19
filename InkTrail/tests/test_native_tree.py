@@ -67,6 +67,7 @@ TradeSkillFrameEditBox = CreateFrame('EditBox')
 TradeSkillFrameEditBox.GetText = function() return searchText end
 TradeSkillFrameAvailableFilterCheckButton = CreateFrame('CheckButton')
 TradeSkillFrameAvailableFilterCheckButton.GetChecked = function() return makeable end
+TradeSkillFrameAvailableFilterCheckButton.SetChecked = function(self,value) makeable=value end
 DoTradeSkill = function(index, count)
  assert(not combat and not linked and not dead and not casting, 'native craft bypassed an activity guard')
  assert(count == 1, 'one hardware click must perform exactly one native cast')
@@ -212,4 +213,66 @@ for index,profession in ipairs(professions) do
  Check(#casts==before+1 and casts[#casts]==spell, 'wrong native recipe for '..profession)
 end
 print('Full-TOC native crafting and all-profession tree checks passed.')
+-- Stock client's placeholder lives in the EditBox, but is NOT a name filter.
+-- Use the real handler's behavior; the old fake SetFilter hid this regression.
+SEARCH='Search'
+TradeSkillFrame_SetFilter=nil
+local editText
+TradeSkillFrameEditBox.GetText=function() return editText or searchText end
+TradeSkillFrameEditBox.SetText=function(self,text) editText=text end
+TradeSkillFilter_OnTextChanged=function(self)
+ local text=self:GetText()
+ if text==SEARCH then SetTradeSkillItemNameFilter(''); return end
+ SetTradeSkillItemLevelFilter(0,0)
+ SetTradeSkillItemNameFilter(text)
+end
+for _,profession in ipairs(professions) do
+ local list={}
+ for n=1,25 do list[n]=Recipe(950000+n,960000+n,{},n%2+1) end
+ list[1].name='Search' -- Broken restoration leaves exactly this single recipe.
+ Setup(list,profession,{}); editText=SEARCH; addon.recipeCatalog=nil
+ local catalog=addon.RecipeCatalog(true)
+ Check(GetNumTradeSkills()==25, 'catalog reduced '..profession..' to a filtered recipe list')
+ for n=1,25 do
+  Check(catalog.bySpell[list[n].spell], 'learned recipe absent from catalog')
+  SelectTradeSkill(n); addon.BuildDependencyTree(n)
+  Check(GetTradeSkillItemLink(selection)=='item:'..list[n].output, 'selection lost')
+ end
+ Check(addon.NativeCraft(list[25].spell,list[25].output), 'last recipe cannot craft')
+ Check(GetNumTradeSkills()==25, 'native craft hid other recipes')
+ editText='Search'; SetTradeSkillItemNameFilter('Search')
+ Check(GetNumTradeSkills()==1, 'fixture must reproduce single-recipe filter')
+ SlashCmdList.INKTRAIL('all')
+ Check(GetNumTradeSkills()==25 and not makeable and subFilter==0 and slotFilter==0,
+  'show-all command failed for '..profession)
+ -- A genuine text search still survives catalog scans.
+ editText='Recipe950002'; SetTradeSkillItemNameFilter(editText)
+ addon.RecipeCatalog(true)
+ Check(GetNumTradeSkills()==1 and recipes[1].spell==950002, 'user search was not preserved')
+end
+print('Multiple-recipe list preservation and show-all checks passed for all 11 professions.')
+-- Filter restoration can rebuild category expansion in the client. Both open
+-- and deliberately closed categories must survive repeated scans and crafts.
+editText=''
+local open={header=true,name='Open category',expanded=true,category=1,reagents={}}
+local closed={header=true,name='Closed category',expanded=false,category=2,reagents={}}
+local r1=Recipe(970001,980001,{},1)
+local r2=Recipe(970002,980002,{},2)
+Setup({open,r1,closed,r2},'Engineering',{})
+local originalNameFilter=SetTradeSkillItemNameFilter
+SetTradeSkillItemNameFilter=function(text)
+ for _,r in ipairs(allRecipes) do if r.header then r.expanded=false end end
+ originalNameFilter(text)
+end
+for n=1,3 do
+ addon.RecipeCatalog(true)
+ Check(open.expanded and not closed.expanded, 'catalog changed category expansion')
+ Check(GetNumTradeSkills()==3, 'catalog hid open category recipes')
+ Check(addon.NativeCraft(r1.spell,r1.output), 'category fixture craft failed')
+ addon.RestoreRecipeSelection()
+ Check(open.expanded and not closed.expanded and GetNumTradeSkills()==3,
+  'craft changed category expansion')
+end
+SetTradeSkillItemNameFilter=originalNameFilter
+print('Repeated catalog/craft category expansion preservation passed.')
 ''')

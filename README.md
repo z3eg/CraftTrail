@@ -3,7 +3,7 @@
 Recipe material trails for World of Warcraft **Wrath of the Lich King 3.3.5a**
 (interface 30300).
 
-**CraftTrail 2.0.0** displays the selected recipe as a connected material tree,
+**CraftTrail 2.0.2** displays the selected recipe as a connected material tree,
 with native item links, required/allocated bag counts, per-node Craft buttons,
 disabled reasons, batch yields and alternate recipes. It uses the native
 profession Create action rather than trying to cast profession recipes by name.
@@ -30,6 +30,15 @@ The resulting path must be `Interface/AddOns/InkTrail/InkTrail.toc`. Restart the
 game and enable InkTrail. Keep the folder name InkTrail; this preserves the
 existing add-on identity and saved window settings. No server build is required.
 
+If the native recipe list is filtered down, open the profession and run
+`/crafttrail all` to clear search/category/slot/material filters and expand all
+categories. This shows every learned recipe; it does not learn new recipes.
+
+Version 2.0.2 fixes the stock search placeholder being restored as a real
+recipe-name filter during catalog scans and component crafting. It also snapshots
+category expansion before filter changes and restores it after filter restoration,
+so repeated scans and crafts preserve open/closed categories.
+
 Craft debugging: `/crafttrail why` prints native recipe eligibility and the last
 request/client error; `/crafttrail version` prints the installed version.
 `/inktrail` remains an alias. Learned recipes are resolved from the complete
@@ -45,7 +54,7 @@ Build the installable package and separate Engineering browser sketch with:
 python tools/package.py
 ```
 
-The output is `dist/CraftTrail-2.0.0.zip`. Copy only its InkTrail folder
+The output is `dist/CraftTrail-2.0.2.zip`. Copy only its InkTrail folder
 into AddOns; open `Engineering-preview.html` in a browser. The preview is not an
 in-game module; the actual dependency tree is included in the InkTrail folder.
 

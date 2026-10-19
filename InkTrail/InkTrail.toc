@@ -2,7 +2,7 @@
 ## Title: CraftTrail (InkTrail)
 ## Notes: Crafting dependency trees, native item links and per-component crafting for all crafting professions.
 ## Author: Guided Work
-## Version: 2.0.0
+## Version: 2.0.2
 ## SavedVariables: InkTrailDB
 
 Data.lua

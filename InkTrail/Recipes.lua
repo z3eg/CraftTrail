@@ -80,6 +80,33 @@ function addon.WithAllRecipes(callback)
     if busy then return end
     busy = true
     local selected = Identity(GetTradeSkillSelectionIndex())
+    -- Snapshot UI state before any filter setter can dispatch UI updates.
+    local search = TradeSkillFrameEditBox and TradeSkillFrameEditBox:GetText() or ""
+    if search == SEARCH then search = "" end
+    local makeable = TradeSkillFrameAvailableFilterCheckButton and
+        TradeSkillFrameAvailableFilterCheckButton:GetChecked()
+    local headers = {}
+    local function RememberHeaders()
+        for n = 1, GetNumTradeSkills() do
+            local name, kind, _, expanded = GetTradeSkillInfo(n)
+            if kind == "header" and headers[name] == nil then headers[name] = Flag(expanded) end
+        end
+    end
+    RememberHeaders()
+    local function RestoreHeaders()
+        local n = 1
+        while n <= GetNumTradeSkills() do
+            local name, kind, _, expanded = GetTradeSkillInfo(n)
+            if kind == "header" and headers[name] ~= nil then
+                if headers[name] and not Flag(expanded) and ExpandTradeSkillSubClass then
+                    ExpandTradeSkillSubClass(n)
+                elseif not headers[name] and Flag(expanded) and CollapseTradeSkillSubClass then
+                    CollapseTradeSkillSubClass(n)
+                end
+            end
+            n = n + 1
+        end
+    end
     local filters = {}
     for _, group in ipairs({{"SubClass", "GetTradeSkillSubClasses"}, {"InvSlot", "GetTradeSkillInvSlots"}}) do
         local get, set, list = _G["GetTradeSkill" .. group[1] .. "Filter"],
@@ -88,29 +115,16 @@ function addon.WithAllRecipes(callback)
             local saved = {get = get, set = set, all = Flag(get(0)), enabled = {}}
             for n = 1, select("#", list()) do saved.enabled[n] = Flag(get(n)) end
             filters[#filters + 1] = saved
-            set(0, 1, 1)
         end
     end
-    local search = TradeSkillFrameEditBox and TradeSkillFrameEditBox:GetText() or ""
-    local makeable = TradeSkillFrameAvailableFilterCheckButton and
-        TradeSkillFrameAvailableFilterCheckButton:GetChecked()
+    for _, saved in ipairs(filters) do saved.set(0, 1, 1) end
     if SetTradeSkillItemNameFilter then SetTradeSkillItemNameFilter("") end
     if SetTradeSkillItemLevelFilter then SetTradeSkillItemLevelFilter(0, 0) end
     if TradeSkillOnlyShowMakeable then TradeSkillOnlyShowMakeable(false) end
-    local collapsed = {}
-    for n = 1, GetNumTradeSkills() do
-        local name, kind, _, expanded = GetTradeSkillInfo(n)
-        if kind == "header" and not Flag(expanded) then collapsed[name] = true end
-    end
+    RememberHeaders() -- Also retain categories hidden by the original filters.
     if ExpandTradeSkillSubClass then ExpandTradeSkillSubClass(0) end
     local ok, result, extra = pcall(callback)
-    -- Restore headers from bottom to top so collapsing never invalidates earlier indices.
-    if CollapseTradeSkillSubClass then
-        for n = GetNumTradeSkills(), 1, -1 do
-            local name, kind = GetTradeSkillInfo(n)
-            if kind == "header" and collapsed[name] then CollapseTradeSkillSubClass(n) end
-        end
-    end
+    RestoreHeaders() -- Include categories that will be hidden again by filters.
     for _, saved in ipairs(filters) do
         saved.set(0, saved.all and 1 or 0, 1)
         if not saved.all then
@@ -118,13 +132,44 @@ function addon.WithAllRecipes(callback)
         end
     end
     if TradeSkillOnlyShowMakeable then TradeSkillOnlyShowMakeable(Flag(makeable)) end
-    if TradeSkillFrame_SetFilter then TradeSkillFrame_SetFilter(search)
+    -- Stock 3.3.5 uses this handler (there is no TradeSkillFrame_SetFilter).
+    -- It also restores numeric/~level searches, not just item-name searches.
+    if TradeSkillFilter_OnTextChanged then
+        TradeSkillFilter_OnTextChanged({GetText = function() return search end})
+    elseif TradeSkillFrame_SetFilter then TradeSkillFrame_SetFilter(search)
     elseif SetTradeSkillItemNameFilter then SetTradeSkillItemNameFilter(search) end
+    -- Filter setters can rebuild/reset category expansion. Restore AFTER them,
+    -- never before; otherwise every scan or craft can collapse the user's list.
+    RestoreHeaders()
     RestoreSelected(selected)
     restoreSelection = selected -- The stock filter-event handler may reset selection later this frame.
     busy = false
     if not ok then return nil, tostring(result) end
     return result, extra
+end
+
+function addon.ShowAllRecipes()
+    if InCombatLockdown() or not TradeSkillFrame or not TradeSkillFrame:IsShown() then return end
+    restoreSelection = nil
+    SetTradeSkillSubClassFilter(0, 1, 1)
+    SetTradeSkillInvSlotFilter(0, 1, 1)
+    if TradeSkillFrameEditBox then TradeSkillFrameEditBox:SetText("") end
+    SetTradeSkillItemNameFilter("")
+    SetTradeSkillItemLevelFilter(0, 0)
+    if TradeSkillFrameAvailableFilterCheckButton then TradeSkillFrameAvailableFilterCheckButton:SetChecked(false) end
+    TradeSkillOnlyShowMakeable(false)
+    ExpandTradeSkillSubClass(0)
+    if UIDropDownMenu_SetSelectedID then
+        UIDropDownMenu_SetSelectedID(TradeSkillSubClassDropDown, 1)
+        UIDropDownMenu_SetSelectedID(TradeSkillInvSlotDropDown, 1)
+    end
+    if UIDropDownMenu_SetText then
+        UIDropDownMenu_SetText(TradeSkillSubClassDropDown, ALL_SUBCLASSES)
+        UIDropDownMenu_SetText(TradeSkillInvSlotDropDown, ALL_INVENTORY_SLOTS)
+    end
+    if FauxScrollFrame_SetOffset then FauxScrollFrame_SetOffset(TradeSkillListScrollFrame, 0) end
+    addon.recipeCatalog = nil
+    if TradeSkillFrame_Update then TradeSkillFrame_Update() end
 end
 
 function addon.RecipeCatalog(force)
